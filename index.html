@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+    <style>
+
+        html, body, .c {
+            height: 100%;
+        }
+
+        .c {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+
+        }
+
+        
+    </style>
+
+    <body>
+        <div class="c">
+            <img id="d" src="diskussion.png" />
+            <img id="u" src="ueber.png" />
+            <img id="b" src="dynamik.png" />
+        </div>
+    </body>
+
+    <script>
+        const files = {
+            "d": ["diskussion.png", "draht.png", "drogen.png", "drum.png", "dynamik.png"],
+            "u": ["ueber.png", "und.png", "unter.png", "unterstuetzt.png"],
+            "b": ["bass.png", "bauweise.png", "beats.png", "begeisterung.png", "bewegung.png"]
+        };
+
+        function r(max) {
+            return Math.floor(Math.random() * (Math.floor(max) - 1));
+        }
+
+        setInterval(() => {
+            Object.keys(files).forEach((k) => {
+                const ar = r(files[k].length+1)
+                console.log(`set src of ${k} to ${files[k][ar]} while ar = ${ar}`)
+                document.getElementById(k).src = files[k][ar]
+            });
+        }, 5000);
+    </script>
+</html>
