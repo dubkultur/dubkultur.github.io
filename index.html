@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html>
-
     <style>
-
         html, body, .c {
             height: 100%;
         }
@@ -14,15 +12,13 @@
             flex-direction: column;
 
         }
-
-        
     </style>
 
     <body>
         <div class="c">
             <img id="d" src="diskussion.png" />
             <img id="u" src="ueber.png" />
-            <img id="b" src="dynamik.png" />
+            <img id="b" src="bauweise.png" />
         </div>
     </body>
 
@@ -32,24 +28,24 @@
             "u": ["ueber.png", "und.png", "unter.png", "unterstuetzt.png"],
             "b": ["bass.png", "bauweise.png", "beats.png", "begeisterung.png", "bewegung.png"]
         },
-        keys = Object.keys(files);
+        keys = Object.keys(files),
+        lastAr = {'k': -1, 'd': -1, 'u': -1, 'b': -1};
 
         function r(max) {
             return Math.floor(Math.random() * (Math.floor(max) - 1));
         }
 
-        let lastK = -1;
-
         setInterval(() => {
-            let k;
+            let k, ar;
             do {
                 k = keys[r(keys.length + 1)];
-            } while (k === lastK);
-            lastK = k;
-            //Object.keys(files).forEach((k) => {
-                const ar = r(files[k].length + 1)
-                document.getElementById(k).src = files[k][ar]
-            //});
+            } while (lastAr['k'] === k);
+            lastAr['k'] = k;
+            do {
+                ar = r(files[k].length + 1);
+            } while (lastAr[k] === ar);
+            lastAr[k] = ar;
+            document.getElementById(k).src = files[k][ar];
         }, 3000);
     </script>
 </html>
