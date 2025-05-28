@@ -28,21 +28,28 @@
 
     <script>
         const files = {
-            "d": ["diskussion.png", "draht.png", "drogen.png", "drum.png", "dynamik.png"],
+            "d": ["diskussion.png", "draht.png", "droge.png", "drum.png", "dynamik.png"],
             "u": ["ueber.png", "und.png", "unter.png", "unterstuetzt.png"],
             "b": ["bass.png", "bauweise.png", "beats.png", "begeisterung.png", "bewegung.png"]
-        };
+        },
+        keys = Object.keys(files);
 
         function r(max) {
             return Math.floor(Math.random() * (Math.floor(max) - 1));
         }
 
+        let lastK = -1;
+
         setInterval(() => {
-            Object.keys(files).forEach((k) => {
-                const ar = r(files[k].length+1)
-                console.log(`set src of ${k} to ${files[k][ar]} while ar = ${ar}`)
+            let k;
+            do {
+                k = keys[r(keys.length + 1)];
+            } while (k === lastK);
+            lastK = k;
+            //Object.keys(files).forEach((k) => {
+                const ar = r(files[k].length + 1)
                 document.getElementById(k).src = files[k][ar]
-            });
-        }, 5000);
+            //});
+        }, 3000);
     </script>
 </html>
