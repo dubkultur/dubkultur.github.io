@@ -123,7 +123,7 @@ function createDocumentSource() {
         htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
     }
     setProgress(20);
-    addToRepo(htmlString);
+    addToRepo(dir, htmlString);
 }
 
 function generateIndexHtml(existingPages) {
@@ -146,7 +146,7 @@ function generateIndexHtml(existingPages) {
 <html>`;
 }
 
-async function addToRepo(htmlString) {
+async function addToRepo(localDir, htmlString) {
     let pw = prompt('Password or Token, please.');
     if (!pw) {
         showProgress(false);
@@ -156,31 +156,31 @@ async function addToRepo(htmlString) {
     setProgress(50);
     let pagesDir = [];
     try {
-        pagesDir = await pfs.readdir(`${dir}/pages`);
+        pagesDir = await pfs.readdir(`${localDir}/pages`);
     } catch (e) {
     }
 
     if (pagesDir.length === 0) {
         try {
-            await pfs.mkdir(`${dir}/pages`);
+            await pfs.mkdir(`${localDir}/pages`);
         } catch(e) {
         }
     }
     const pagesLen = pagesDir.length + 1;
     const fname = `pages/page_${pagesLen}.html`;
 
-    await pfs.writeFile(`${dir}/${fname}`, htmlString, 'utf8');
-    await pfs.writeFile(`${dir}/index.html`, generateIndexHtml(pagesLen), 'utf8');
+    await pfs.writeFile(`${localDir}/${fname}`, htmlString, 'utf8');
+    await pfs.writeFile(`${localDir}/index.html`, generateIndexHtml(pagesLen), 'utf8');
 
-    const stat1 = await git.status({fs, dir, filepath: fname});
-    const stat2 = await git.status({fs, dir, filepath: 'index.html'});
+    const stat1 = await git.status({fs, localDir, filepath: fname});
+    const stat2 = await git.status({fs, localDir, filepath: 'index.html'});
 
-    const add1 = await git.add({fs, dir, filepath: fname});
-    const add2 = await git.add({fs, dir, filepath: 'index.html'});
+    const add1 = await git.add({fs, localDir, filepath: fname});
+    const add2 = await git.add({fs, localDir, filepath: 'index.html'});
     setProgress(60);
     let sha = await git.commit({
         fs,
-        dir,
+        dir: localDir,
         message: `Added ${fname}.`,
         author: {
             name: user,
@@ -191,7 +191,7 @@ async function addToRepo(htmlString) {
     let pushResult = await git.push({
         fs,
         http,
-        dir,
+        dir: localDir,
         remote: 'origin',
         ref: 'main',
         onAuth: () => ({ username: pw }),
@@ -204,6 +204,7 @@ async function addToRepo(htmlString) {
     }, 500);
 }
 
+const dir = '/dubs';
 const documentValues = {};
 let templateSourceString;
 
