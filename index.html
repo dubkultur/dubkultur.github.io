@@ -13,18 +13,21 @@
         }
     </style>
 
-    <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
-<script src="https://unpkg.com/isomorphic-git"></script>
-<script type="module">
-import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
-// Initialize isomorphic-git with a file system
-window.fs = new LightningFS('fs')
-// I prefer using the Promisified version honestly
-window.pfs = window.fs.promises
+    <!--<script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>-->
+    <script src="/res/lightning-fs.js"></script>
+    <!--<script src="https://unpkg.com/isomorphic-git"></script>-->
+    <script src="/res/isomorphic-git.js"></script>
 
-window.http = http;
-run();
-</script>
+    <script type="module">
+    //import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
+    import http from '/res/http.js'
+    
+    window.fs = new LightningFS('fs')
+    window.pfs = window.fs.promises
+
+    window.http = http;
+    run();
+    </script>
 
     <body>
         <div class="c">
@@ -41,12 +44,12 @@ run();
             <label for="token">Token:</label>
             <input type="password" id="token" name="token" required size="10" />
             -->
-            <button onClick='(function() { cloneRepo(document.getElementById("repo").value);  })();'>Clone now!</button>
+            <button onClick='(function() { initRepo(document.getElementById("repo").value);  })();'>Clone now!</button>
         </div>
     </body>
 
     <script>
-
+/*
 const templateString = `<!DOCTYPE html>
 <html>
     <style>
@@ -70,8 +73,9 @@ const templateString = `<!DOCTYPE html>
         </div>
     </body>
 </html>`;
+*/
 
-function injectDOM() {
+function injectDOM(templateString) {
     
     const htmlString = templateString.replaceAll(/\$\[([^\\]+?)\]/gi, (match, p1) => {
         
@@ -147,9 +151,30 @@ async function run() {
     return;
 }
 
+async function initRepo(repoUrl) {
+    await cloneRepo(repoUrl);
+    await readRepo();
+}
+
+async function readRepo() {
+    let readDir3 = await pfs.readdir(dir);
+
+    if (readDir3.includes('_templates')) {
+        let templateDir = await pfs.readdir(`${dir}/_templates`);
+// todo show menu to let user select which template to use
+        for (const templateFilePath of templateDir) {
+            let templateSource = await pfs.readfile(`${dir}/_templates/${templateFilePath}`);
+
+            injectDOM(templateSource);
+
+            //let template = createTemplate(templateSource);
+        }
+
+    }
+}
+
 async function cloneRepo(repoUrl) {
     window.dir = '/tutorial'
-    console.log(dir);
         
     let readDir = [];
     try {
@@ -159,52 +184,36 @@ async function cloneRepo(repoUrl) {
     }
     if (readDir.length === 0) {
 
-        let mkDir = await pfs.mkdir(dir);
+        /*let mkDir = */await pfs.mkdir(dir);
     }        
-        //const repoUrl = prompt('repo url?', 'https://github.com/isomorphic-git/isomorphic-git')
+    //const repoUrl = prompt('repo url?', 'https://github.com/isomorphic-git/isomorphic-git')
 
-        debugger;
-        // Behold - it is empty!
-        let readDir2 = await pfs.readdir(dir);
+    let readDir2 = await pfs.readdir(dir);
 
-        // Do I have to `clone` every time I want to access the files?
-        // Even after having `clone`d before if this does not happen every time
-        // it only contains `.git`!?
+    // Do I have to `clone` every time I want to access the files?
+    // Even after having `clone`d before if this does not happen every time
+    // it only contains `.git`!?
 
-        let cloneRes = await git.clone({
-            fs,
-            http,
-            dir,
-            corsProxy: 'https://cors.isomorphic-git.org',
-            url: repoUrl,//'https://github.com/isomorphic-git/isomorphic-git',
-            ref: 'main',
-            singleBranch: true,
-            depth: 1,
-            onAuth: url => {
-                const username = document.getElementById('user').value,
-                        pw = prompt('Password or Token, please.');
-                return {
-                    username: username,
-                    password: pw,
-                };
-            }
-        });
-
-        // Now it should not be empty...
-        let readDir3 = await pfs.readdir(dir);
-        //console.log("");
-
-        if (readDir3.includes('_templates')) {
-            let templateDir = await pfs.readdir(`${dir}/_templates`);
-
-            for (const templateFilePath of templateDir) {
-                let templateSource = await pfs.readfile(`${dir}/_templates/${templateFilePath}`);
-                let template = createTemplate(templateSource);
-            }
-
+    let cloneRes = await git.clone({
+        fs,
+        http,
+        dir,
+        corsProxy: 'https://cors.isomorphic-git.org',
+        url: repoUrl,//'https://github.com/isomorphic-git/isomorphic-git',
+        ref: 'main',
+        singleBranch: true,
+        depth: 1,
+        onAuth: url => {
+            const username = document.getElementById('user').value,
+                    pw = prompt('Password or Token, please.');
+            return {
+                username: username,
+                password: pw,
+            };
         }
+    });
 
-  //  }
+
 }
     </script>
 </html>
