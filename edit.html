@@ -97,7 +97,7 @@ function createDocumentSource() {
 
 function generateIndexHtml(existingPages) {
     let part = '';
-    for (let n = 0; n <= existingPages; n++) {
+    for (let n = 1; n <= existingPages; n++) {
         part = part + `<ol><a href="/pages/page_${n}.html">Page #${n}</ol>`;
     }
 
@@ -105,8 +105,7 @@ function generateIndexHtml(existingPages) {
 <ul>
     ${part}
 </ul>
-<html>
-    `;
+<html>`;
 }
 
 async function addToRepo(htmlString) {
