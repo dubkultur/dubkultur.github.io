@@ -76,7 +76,9 @@ function injectDOM(templateString) {
         const splitVal = p1.split(':'),
                 name = splitVal[0],
                 type = splitVal.length > 1 ? splitVal[1] : '';
-        const val = `<button id='__id_${name}' onClick='(function() { __called("${name}", "${type}"); })();'>${name}</button>`;
+        const val = `<button id='__id_${name}' onClick='(function() { 
+                __called("${name}", "${type}"); 
+            })();'>${name}</button>`;
         if (documentValues.hasOwnProperty(name)) {
             console.log(`warn: The name '${name}' is already used!`);
         }
@@ -84,7 +86,7 @@ function injectDOM(templateString) {
         return val;
     });
     const injectUIHtmlString = `
-        <button id="save" style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
+        <button id='save' style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
             onClick='(function() { 
                 document.getElementById("save").setAttribute("disabled", "disabled");
                 document.getElementById("progress").style = "visibility: visible";
@@ -189,7 +191,11 @@ async function addToRepo(htmlString) {
         onAuth: () => ({ username: pw }),
     });
     setProgress(100);
+    // todo give more feedback, esp. in case of err..
     console.log(pushResult)
+    setTimeout(() => {
+        document.getElementById("progress").style = "visibility: hidden";    
+    }, 500);
 }
 
 const documentValues = {};
