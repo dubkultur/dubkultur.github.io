@@ -58,7 +58,7 @@
 
             <button id='clone' onClick='(function() { 
                     document.getElementById("clone").setAttribute("disabled", "disabled");
-                    document.getElementById("progress").style = "visibility: visible";
+                    showProgress(true);
                     setProgress(5);
                     initRepo();  
                 })();'>Clone now!</button>
@@ -69,6 +69,10 @@
 
 function setProgress(num) {
     document.getElementById("progress").value = num;
+}
+
+function showProgress(show) {
+    document.getElementById("progress").style = "visibility: " + show ? "visible" : "hidden";
 }
 
 function injectDOM(templateString) {
@@ -89,7 +93,7 @@ function injectDOM(templateString) {
         <button id='save' style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
             onClick='(function() { 
                 document.getElementById("save").setAttribute("disabled", "disabled");
-                document.getElementById("progress").style = "visibility: visible";
+                showProgress(true);
                 setProgress(5);
                 createDocumentSource(); 
             })();'>
@@ -143,6 +147,13 @@ function generateIndexHtml(existingPages) {
 }
 
 async function addToRepo(htmlString) {
+    let pw = prompt('Password or Token, please.');
+    if (!pw) {
+        showProgress(false);
+        return;
+    }
+
+    setProgress(50);
     let pagesDir = [];
     try {
         pagesDir = await pfs.readdir(`${dir}/pages`);
@@ -166,7 +177,7 @@ async function addToRepo(htmlString) {
 
     const add1 = await git.add({fs, dir, filepath: fname});
     const add2 = await git.add({fs, dir, filepath: 'index.html'});
-    setProgress(50);
+    setProgress(60);
     let sha = await git.commit({
         fs,
         dir,
@@ -176,12 +187,7 @@ async function addToRepo(htmlString) {
             email: email,
         }
     });
-    setProgress(55);
-    let pw;
-    while (!pw) {
-        pw = prompt('Password or Token, please.');
-    }
-    setProgress(60);
+    setProgress(70);
     let pushResult = await git.push({
         fs,
         http,
@@ -194,7 +200,7 @@ async function addToRepo(htmlString) {
     // todo give more feedback, esp. in case of err..
     console.log(pushResult)
     setTimeout(() => {
-        document.getElementById("progress").style = "visibility: hidden";    
+        showProgress(false);
     }, 500);
 }
 
