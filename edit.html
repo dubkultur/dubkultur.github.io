@@ -208,9 +208,6 @@ const documentValues = {};
 let templateSourceString;
 
 async function run() {
-
-    window.dir = '/dubs';
-
     document.getElementById('repo').addEventListener('keydown', e => {
         if (e.code === "Enter") {
             initRepo();
@@ -225,17 +222,18 @@ async function initRepo() {
     window.email = document.getElementById("email").value;
     window.repo = document.getElementById("repo").value;
 
-    await cloneRepo(repo);
-    await readRepo();
+    const dir = '/dubs';
+    await cloneRepo(dir, repo);
+    await readRepo(dir);
 }
 
-async function readRepo() {
-    let readDir3 = await pfs.readdir(dir);
-    if (readDir3.includes('_templates')) {
-        let templateDir = await pfs.readdir(`${dir}/_templates`);
+async function readRepo(localDir) {
+    let readDir = await pfs.readdir(localDir);
+    if (readDir.includes('_templates')) {
+        let templateDir = await pfs.readdir(`${localDir}/_templates`);
 // todo show menu to let user select which template to use
         for (const templateFilePath of templateDir) {
-            const templateSource = await pfs.readFile(`${dir}/_templates/${templateFilePath}`);
+            const templateSource = await pfs.readFile(`${localDir}/_templates/${templateFilePath}`);
 
             templateSourceString = new TextDecoder().decode(templateSource);
 
@@ -246,33 +244,37 @@ async function readRepo() {
     }
 }
 
-async function cloneRepo(repoUrl) {
+async function cloneRepo(localDir, repoUrl) {
     let readDir = [];
     try {
-        readDir = await pfs.readdir(dir);
+        readDir = await pfs.readdir(localDir);
     } catch (e) {
     }
 
     if (readDir.length === 0) {
         try {
-        /*let mkDir = */await pfs.mkdir(dir);
+            await pfs.mkdir(localDir);
         } catch(e) {
         }
     }        
-    //const repoUrl = prompt('repo url?', 'https://github.com/isomorphic-git/isomorphic-git')
 
-    let readDir2 = await pfs.readdir(dir);
+    readDir = await pfs.readdir(localDir);
 
-    // Do I have to `clone` every time I want to access the files?
-    // Even after having `clone`d before if this does not happen every time
-    // it only contains `.git`!?
+    if (window.localStorage.getItem('repoUrl') === repoUrl) {
+        if (readDir.length > 1) {
+            setProgress(90);
+            return;
+        }
+    } else {
+        window.localStorage.setItem('repoUrl', repoUrl);
+    }
 
     setProgress(10);
 
     let cloneRes = await git.clone({
         fs,
         http,
-        dir,
+        dir: localDir,
         corsProxy: 'https://cors.isomorphic-git.org',
         url: repoUrl,//'https://github.com/isomorphic-git/isomorphic-git',
         ref: 'main',
@@ -288,7 +290,7 @@ async function cloneRepo(repoUrl) {
         }
     });
 
-    setProgress(30);
+    setProgress(90);
 }
     </script>
 </html>
