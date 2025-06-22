@@ -38,7 +38,7 @@
             -->
 
             <label for="repo">Repository:</label>
-            <input type="text" id="repo" name="repo" required size="100" style="margin:2rem;" />
+            <input type="text" id="repo" name="repo" required size="100" style="margin:2rem;" value="https://github.com/sdubtest/sdubtest.github.io.git" />
             
             <!--
             <label for="token">Token:</label>
@@ -142,13 +142,13 @@ function createDocumentSource(templateSource) {
 }
 
 async function run() {
+    document.getElementById('repo').addEventListener('keydown', e => {
+        if (e.code === "Enter") {
+            initRepo(document.getElementById("repo").value);
+        }
+    });
 
     //todo check if login data if available from LocalStorage ..
-
-    //injectDOM();
-
-
-    return;
 }
 
 async function initRepo(repoUrl) {
@@ -163,9 +163,11 @@ async function readRepo() {
         let templateDir = await pfs.readdir(`${dir}/_templates`);
 // todo show menu to let user select which template to use
         for (const templateFilePath of templateDir) {
-            let templateSource = await pfs.readfile(`${dir}/_templates/${templateFilePath}`);
+            const templateSource = await pfs.readFile(`${dir}/_templates/${templateFilePath}`);
 
-            injectDOM(templateSource);
+            const templateSourceString = new TextDecoder().decode(templateSource);
+
+            injectDOM(templateSourceString);
 
             //let template = createTemplate(templateSource);
         }
@@ -180,11 +182,13 @@ async function cloneRepo(repoUrl) {
     try {
         readDir = await pfs.readdir(dir);
     } catch (e) {
-
     }
-    if (readDir.length === 0) {
 
+    if (readDir.length === 0) {
+        try {
         /*let mkDir = */await pfs.mkdir(dir);
+        } catch(e) {
+        }
     }        
     //const repoUrl = prompt('repo url?', 'https://github.com/isomorphic-git/isomorphic-git')
 
