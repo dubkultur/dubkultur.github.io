@@ -47,17 +47,29 @@
             <input type="text" id="email" name="email" required size="30" value="sdubtest1@gmail.com" />
             
             <label for="repo">Repository:</label>
-            <input type="text" id="repo" name="repo" required size="100" value="https://github.com/sdubtest/sdubtest.github.io.git" />
+            <input type="text" id="repo" name="repo" required size="40" value="https://github.com/sdubtest/sdubtest.github.io.git" />
             
             <!--
             <label for="token">Token:</label>
             <input type="password" id="token" name="token" required size="10" />
             -->
-            <button onClick='(function() { initRepo();  })();'>Clone now!</button>
+
+            <progress id="progress" value="0" max="100" style="visibility: hidden;"></progress>
+
+            <button id='clone' onClick='(function() { 
+                    document.getElementById("clone").setAttribute("disabled", "disabled");
+                    document.getElementById("progress").style = "visibility: visible";
+                    setProgress(5);
+                    initRepo();  
+                })();'>Clone now!</button>
         </div>
     </body>
 
     <script>
+
+function setProgress(num) {
+    document.getElementById("progress").value = num;
+}
 
 function injectDOM(templateString) {
     const htmlString = templateString.replaceAll(/\$\[([^\\]+?)\]/gi, (m, p1) => {
@@ -72,10 +84,16 @@ function injectDOM(templateString) {
         return val;
     });
     const injectUIHtmlString = `
-        <button style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
-            onClick='(function() { createDocumentSource(); })();'>
+        <button id="save" style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
+            onClick='(function() { 
+                document.getElementById("save").setAttribute("disabled", "disabled");
+                document.getElementById("progress").style = "visibility: visible";
+                setProgress(5);
+                createDocumentSource(); 
+            })();'>
                 Speichern!
-        </button>`;
+        </button>
+        <progress id="progress" value="0" max="100" style="visibility: hidden;"></progress>`;
     const parser = new DOMParser();
     const newDocument = parser.parseFromString(injectUIHtmlString  + htmlString, 'text/html');
     const currentRoot = document.documentElement;
@@ -83,8 +101,11 @@ function injectDOM(templateString) {
 }
 
 function __called(name, type) {
-    documentValues[name] = prompt('Neuer Inhalt?', documentValues[name]);
-    document.getElementById(`__id_${name}`).innerText = documentValues[name];
+    const val = prompt('Neuer Inhalt?', documentValues[name]);
+    if (val) {
+        documentValues[name] = val;
+        document.getElementById(`__id_${name}`).innerText = documentValues[name];
+    }
 }
 
 function createDocumentSource() {
@@ -95,6 +116,7 @@ function createDocumentSource() {
                 endIdx = htmlString.indexOf(']', startIdx + 1);
         htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
     }
+    setProgress(20);
     addToRepo(htmlString);
 }
 
@@ -142,7 +164,7 @@ async function addToRepo(htmlString) {
 
     const add1 = await git.add({fs, dir, filepath: fname});
     const add2 = await git.add({fs, dir, filepath: 'index.html'});
-
+    setProgress(50);
     let sha = await git.commit({
         fs,
         dir,
@@ -152,9 +174,12 @@ async function addToRepo(htmlString) {
             email: email,
         }
     });
-
-    const pw = prompt('Password or Token, please.')
-
+    setProgress(55);
+    let pw;
+    while (!pw) {
+        pw = prompt('Password or Token, please.');
+    }
+    setProgress(60);
     let pushResult = await git.push({
         fs,
         http,
@@ -162,7 +187,8 @@ async function addToRepo(htmlString) {
         remote: 'origin',
         ref: 'main',
         onAuth: () => ({ username: pw }),
-    })
+    });
+    setProgress(100);
     console.log(pushResult)
 }
 
@@ -201,6 +227,8 @@ async function readRepo() {
 
             templateSourceString = new TextDecoder().decode(templateSource);
 
+            setProgress(80);
+
             injectDOM(templateSourceString);
         }
     }
@@ -227,6 +255,8 @@ async function cloneRepo(repoUrl) {
     // Even after having `clone`d before if this does not happen every time
     // it only contains `.git`!?
 
+    setProgress(10);
+
     let cloneRes = await git.clone({
         fs,
         http,
@@ -245,6 +275,8 @@ async function cloneRepo(repoUrl) {
             };
         }
     });
+
+    setProgress(30);
 }
     </script>
 </html>
