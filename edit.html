@@ -5,9 +5,9 @@
     <meta charset="utf-8">
     <style>
         html, body, .c {
-            height: 100%;
+            height: 95%;
         }
-
+        
         .c {
             display: flex;
             align-items: center;
@@ -72,21 +72,51 @@ function setProgress(num) {
 }
 
 function showProgress(show) {
-    document.getElementById("progress").style = "visibility: " + show ? "visible" : "hidden";
+    document.getElementById("progress").style = "visibility: " + (show ? "visible" : "hidden");
+}
+
+function __called(name, type) {
+    const val = prompt('Neuer Inhalt?', documentValues[name].value);
+    if (val) {
+        documentValues[name].value = val;
+        document.getElementById(`__id_${name}`).innerText = documentValues[name].value;
+    }
 }
 
 function injectDOM(templateString) {
+    const attachUploadHandlers = [];
     const htmlString = templateString.replaceAll(/\$\[([^\\]+?)\]/gi, (m, p1) => {
         const splitVal = p1.split(':'),
+                // why do templator author have to specify a name they cannot reference? ;-) 
+                // could just generate a random identifier and care only about type..
                 name = splitVal[0],
                 type = splitVal.length > 1 ? splitVal[1] : '';
-        const val = `<button id='__id_${name}' onClick='(function() { 
-                __called("${name}", "${type}"); 
-            })();'>${name}</button>`;
+
+        let val;
+        if (type === 'Image') {
+            val = `<div style="display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-direction: row;">
+                        <img id='__preview_${name}' />
+                        <form id='__fid_${name}'>
+                            <label for='__fileInput_${name}'>Choose an image:</label>
+                            <input type='file' id='__fileInput_${name}' accept='image/png, image/jpeg' required>
+                            <button type='submit'>OK</button>
+                        </form>
+                    </div>`;
+            attachUploadHandlers.push(name);
+        } else {
+            val = `<button id='__id_${name}' 
+                    onClick='(function() { 
+                        __called("${name}", "${type}"); 
+                    })();'>${name}</button>`;
+        }
+        
         if (documentValues.hasOwnProperty(name)) {
             console.log(`warn: The name '${name}' is already used!`);
         }
-        documentValues[name] = name;
+        documentValues[name] = {value: name, type: type};
         return val;
     });
     const injectUIHtmlString = `
@@ -95,35 +125,164 @@ function injectDOM(templateString) {
                 document.getElementById("save").setAttribute("disabled", "disabled");
                 showProgress(true);
                 setProgress(5);
-                createDocumentSource(); 
+                saveNewDocumentToRepo(); 
             })();'>
                 Speichern!
         </button>
         <progress id="progress" value="0" max="100" style="visibility: hidden;"></progress>`;
-    const parser = new DOMParser();
-    const newDocument = parser.parseFromString(injectUIHtmlString  + htmlString, 'text/html');
-    const currentRoot = document.documentElement;
+    const parser = new DOMParser(),
+        newDocument = parser.parseFromString(injectUIHtmlString  + htmlString, 'text/html'),
+        currentRoot = document.documentElement;
     document.replaceChild(newDocument.documentElement, currentRoot);
+
+    attachUploadHandlers.forEach(name => {
+        document.getElementById(`__fid_${name}`).addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const fileInput = document.getElementById(`__fileInput_${name}`),
+                file = fileInput.files[0],
+                byteFile = await getAsByteArray(file),
+                blob = new Blob([byteFile], {type: file.type}),
+                urlCreator = window.URL || window.webkitURL,
+                imageUrl = urlCreator.createObjectURL(blob);
+            
+            documentValues[name].value = byteFile;
+            documentValues[name].mimetype = file.type;
+            
+            document.getElementById(`__preview_${name}`).src = imageUrl;
+            document.getElementById(`__fid_${name}`).style = "visibility: hidden";
+            // todo this would be nice:
+            document.getElementById(`__preview_${name}`).addEventListener('onclick', () => document.getElementById(`__fid_${name}`).submit());
+        });
+    });
 }
 
-function __called(name, type) {
-    const val = prompt('Neuer Inhalt?', documentValues[name]);
-    if (val) {
-        documentValues[name] = val;
-        document.getElementById(`__id_${name}`).innerText = documentValues[name];
+function readFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener('loadend', e => resolve(e.target.result));
+    reader.addEventListener('error', reject);
+    reader.readAsArrayBuffer(file);
+  })
+}
+
+async function getAsByteArray(file) {
+  return new Uint8Array(await readFile(file));
+}
+
+async function preparePagesDir(localDir) {
+    let pagesDir = [];
+    try {
+        pagesDir = await pfs.readdir(`${localDir}/pages`);
+    } catch (e) {
     }
+
+    if (pagesDir.length === 0) {
+        try {
+            await pfs.mkdir(`${localDir}/pages`);
+        } catch(e) {
+        }
+    }
+    return pagesDir;
 }
 
-function createDocumentSource() {
+async function saveNewDocumentToRepo() {
+    let pw = prompt('Password or Token, please.');
+    if (!pw) {
+        showProgress(false);
+        document.getElementById("save").removeAttribute("disabled");
+        return;
+    }
+
+    setProgress(30);
+    const localDir = dir;
+    const pagesDir = await preparePagesDir(localDir);
+    const pagesLen = pagesDir.length + 1;
+    const fname = `pages/page_${pagesLen}.html`;
+
     let htmlString = templateSourceString;
+    const files = [];
+    const folders = [];
     for (const name of Object.keys(documentValues)) {
-        const value = documentValues[name],
+        const type = documentValues[name].type,
                 startIdx = htmlString.indexOf(`$[${name}`),
                 endIdx = htmlString.indexOf(']', startIdx + 1);
+
+        let value;
+        if (type === 'Image') {
+            let suff;
+            if (documentValues[name].mimetype === 'image/jpeg') {
+                suff = 'jpg';
+            } else {
+                suff = 'png';
+            }
+            const len = files.length + 1;
+            const foldername = `pages/files_${pagesLen}`;
+            const fname = `${foldername}/img_${len}.${suff}`;
+            if (!folders.includes(foldername)) {
+                folders.push(foldername);
+            }
+            files.push({
+                name: fname,
+                content: documentValues[name].value
+            });
+            value = `<img src='/${fname}'>`;
+        } else {
+            value = documentValues[name].value;
+        }
         htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
     }
     setProgress(20);
-    addToRepo(dir, htmlString);
+
+    await pfs.writeFile(`${localDir}/${fname}`, htmlString, 'utf8');
+    await git.add({fs, dir: localDir, filepath: fname});
+
+    await pfs.writeFile(`${localDir}/index.html`, generateIndexHtml(pagesLen), 'utf8');
+    await git.add({fs, dir: localDir, filepath: 'index.html'});
+
+    for (const folder of folders) {
+        try {
+            await pfs.mkdir(`${localDir}/${folder}`);
+        } catch(e) {
+        }
+    }
+
+    for (const file of files) {
+        await pfs.writeFile(`${localDir}/${file.name}`, file.content);
+        await git.add({fs, dir: localDir, filepath: file.name});
+    }
+
+    setProgress(60);
+    let sha = await git.commit({
+        fs,
+        dir: localDir,
+        message: `Added ${fname}.`,
+        author: {
+            name: user,
+            email: email,
+        }
+    });
+    setProgress(70);
+
+    debugger;
+    
+    let pushResult = await git.push({
+        fs,
+        http,
+        dir: localDir,
+        remote: 'origin',
+        ref: 'main',
+        onAuth: () => ({ username: pw }),
+    });
+
+    if (!pushResult.ok) {
+        alert('Sorry -.- That did not work..');
+    }
+    console.log(pushResult);    
+    setProgress(100);
+    setTimeout(() => {
+        showProgress(false);
+    }, 500);
 }
 
 function generateIndexHtml(existingPages) {
@@ -146,64 +305,6 @@ function generateIndexHtml(existingPages) {
 <html>`;
 }
 
-async function addToRepo(localDir, htmlString) {
-    let pw = prompt('Password or Token, please.');
-    if (!pw) {
-        showProgress(false);
-        return;
-    }
-
-    setProgress(50);
-    let pagesDir = [];
-    try {
-        pagesDir = await pfs.readdir(`${localDir}/pages`);
-    } catch (e) {
-    }
-
-    if (pagesDir.length === 0) {
-        try {
-            await pfs.mkdir(`${localDir}/pages`);
-        } catch(e) {
-        }
-    }
-    const pagesLen = pagesDir.length + 1;
-    const fname = `pages/page_${pagesLen}.html`;
-
-    await pfs.writeFile(`${localDir}/${fname}`, htmlString, 'utf8');
-    await pfs.writeFile(`${localDir}/index.html`, generateIndexHtml(pagesLen), 'utf8');
-
-    const stat1 = await git.status({fs, localDir, filepath: fname});
-    const stat2 = await git.status({fs, localDir, filepath: 'index.html'});
-
-    const add1 = await git.add({fs, localDir, filepath: fname});
-    const add2 = await git.add({fs, localDir, filepath: 'index.html'});
-    setProgress(60);
-    let sha = await git.commit({
-        fs,
-        dir: localDir,
-        message: `Added ${fname}.`,
-        author: {
-            name: user,
-            email: email,
-        }
-    });
-    setProgress(70);
-    let pushResult = await git.push({
-        fs,
-        http,
-        dir: localDir,
-        remote: 'origin',
-        ref: 'main',
-        onAuth: () => ({ username: pw }),
-    });
-    setProgress(100);
-    // todo give more feedback, esp. in case of err..
-    console.log(pushResult)
-    setTimeout(() => {
-        showProgress(false);
-    }, 500);
-}
-
 const dir = '/dubs';
 const documentValues = {};
 let templateSourceString;
@@ -223,7 +324,6 @@ async function initRepo() {
     window.email = document.getElementById("email").value;
     window.repo = document.getElementById("repo").value;
 
-    const dir = '/dubs';
     await cloneRepo(dir, repo);
     await readRepo(dir);
 }
@@ -235,11 +335,8 @@ async function readRepo(localDir) {
 // todo show menu to let user select which template to use
         for (const templateFilePath of templateDir) {
             const templateSource = await pfs.readFile(`${localDir}/_templates/${templateFilePath}`);
-
             templateSourceString = new TextDecoder().decode(templateSource);
-
             setProgress(80);
-
             injectDOM(templateSourceString);
         }
     }
@@ -257,7 +354,7 @@ async function cloneRepo(localDir, repoUrl) {
             await pfs.mkdir(localDir);
         } catch(e) {
         }
-    }        
+    }
 
     readDir = await pfs.readdir(localDir);
 
@@ -271,7 +368,7 @@ async function cloneRepo(localDir, repoUrl) {
     }
 
     setProgress(10);
-
+    // todo is there a callback to show progress while cloning?
     let cloneRes = await git.clone({
         fs,
         http,
