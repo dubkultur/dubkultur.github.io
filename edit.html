@@ -57,7 +57,7 @@
             <progress id="progress" value="0" max="100" style="visibility: hidden;"></progress>
 
             <button id='clone' onClick='(function() { 
-                    document.getElementById("clone").setAttribute("disabled", "disabled");
+                    enable("clone", false);
                     showProgress(true);
                     setProgress(5);
                     initRepo();  
@@ -73,6 +73,14 @@ function setProgress(num) {
 
 function showProgress(show) {
     document.getElementById("progress").style = "visibility: " + (show ? "visible" : "hidden");
+}
+
+function enable(what, really) {
+    if (really) {
+        document.getElementById(what).removeAttribute("disabled");
+    } else {
+        document.getElementById(what).setAttribute("disabled", "disabled");
+    }
 }
 
 function __called(name, type) {
@@ -122,7 +130,7 @@ function injectDOM(templateString) {
     const injectUIHtmlString = `
         <button id='save' style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
             onClick='(function() { 
-                document.getElementById("save").setAttribute("disabled", "disabled");
+                enable('save', false);
                 showProgress(true);
                 setProgress(5);
                 saveNewDocumentToRepo(); 
@@ -190,19 +198,19 @@ async function saveNewDocumentToRepo() {
     let pw = prompt('Password or Token, please.');
     if (!pw) {
         showProgress(false);
-        document.getElementById("save").removeAttribute("disabled");
+        enable('save', true);
         return;
     }
 
     setProgress(30);
-    const localDir = dir;
-    const pagesDir = await preparePagesDir(localDir);
-    const pagesLen = pagesDir.length + 1;
-    const fname = `pages/page_${pagesLen}.html`;
+    const localDir = dir,
+        pagesDir = await preparePagesDir(localDir),
+        pagesLen = pagesDir.length + 1,
+        fname = `pages/page_${pagesLen}.html`,
+        files = [],
+        folders = [];
 
     let htmlString = templateSourceString;
-    const files = [];
-    const folders = [];
     for (const name of Object.keys(documentValues)) {
         const type = documentValues[name].type,
                 startIdx = htmlString.indexOf(`$[${name}`),
@@ -216,9 +224,9 @@ async function saveNewDocumentToRepo() {
             } else {
                 suff = 'png';
             }
-            const len = files.length + 1;
-            const foldername = `pages/files_${pagesLen}`;
-            const fname = `${foldername}/img_${len}.${suff}`;
+            const len = files.length + 1,
+                foldername = `pages/files_${pagesLen}`,
+                fname = `${foldername}/img_${len}.${suff}`;
             if (!folders.includes(foldername)) {
                 folders.push(foldername);
             }
@@ -253,7 +261,7 @@ async function saveNewDocumentToRepo() {
     }
 
     setProgress(60);
-    let sha = await git.commit({
+    const sha = await git.commit({
         fs,
         dir: localDir,
         message: `Added ${fname}.`,
@@ -263,10 +271,7 @@ async function saveNewDocumentToRepo() {
         }
     });
     setProgress(70);
-
-    debugger;
-    
-    let pushResult = await git.push({
+    const pushResult = await git.push({
         fs,
         http,
         dir: localDir,
