@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+    <style>
+        html, body, .c {
+            height: 100%;
+        }
+
+        .c {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+    </style>
+
+    <script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>
+<script src="https://unpkg.com/isomorphic-git"></script>
+<script type="module">
+import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
+// Initialize isomorphic-git with a file system
+window.fs = new LightningFS('fs')
+// I prefer using the Promisified version honestly
+window.pfs = window.fs.promises
+
+window.http = http;
+run();
+</script>
+
+    <body>
+        <div class="c">
+            <h1>Please clone:</h1>
+            <!--
+            <label for="user">Username:</label>
+            <input type="text" id="user" name="user" required size="10" />
+            -->
+
+            <label for="repo">Repository:</label>
+            <input type="text" id="repo" name="repo" required size="100" style="margin:2rem;" />
+            
+            <!--
+            <label for="token">Token:</label>
+            <input type="password" id="token" name="token" required size="10" />
+            -->
+            <button onClick='(function() { cloneRepo(document.getElementById("repo").value);  })();'>Clone now!</button>
+        </div>
+    </body>
+
+    <script>
+
+const templateString = `<!DOCTYPE html>
+<html>
+    <style>
+        html, body, .c {
+            height: 100%;
+        }
+
+        .c {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+    </style>
+
+    <body>
+        <div class="c">
+            <h1>Hallo $[name:String]</h1>
+            <h4>$[now]</h4>
+            <h6>$[content:MultiString]</h6>
+        </div>
+    </body>
+</html>`;
+
+function injectDOM() {
+    
+    const htmlString = templateString.replaceAll(/\$\[([^\\]+?)\]/gi, (match, p1) => {
+        
+        const splitVal = p1.split(':'),
+                name = splitVal[0],
+                type = splitVal.length > 1 ? splitVal[1] : '';
+
+        const val = `<button id='__id_${name}' onClick='(function() { __called("${name}", "${type}"); })();'>${name}</button>`;
+//console.log(val);
+
+        //debugger;
+
+        if (documentValues.hasOwnProperty(name)) {
+            console.log(`warn: The name '${name}' is already used!`);
+        }
+        documentValues[name] = name;
+
+        return val;
+    });
+
+    const injectUIHtmlString = `
+        <button style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
+            onClick='(function() { runCreateDocumentSource(); })();'>
+                Speichern!
+        </button>`;
+
+    const parser = new DOMParser();
+    const newDocument = parser.parseFromString(injectUIHtmlString  + htmlString, 'text/html');
+    const currentRoot = document.documentElement;
+    document.replaceChild(newDocument.documentElement, currentRoot);
+
+}
+
+const documentValues = {};
+
+function __called(name, type) {
+    //debugger;
+    documentValues[name] = prompt('Neuer Inhalt?', documentValues[name]);
+    document.getElementById(`__id_${name}`).innerText = documentValues[name];
+}
+
+function createTemplate(templateSource) {
+    debugger;
+}
+
+function runCreateDocumentSource() {
+    debugger;
+    const s = createDocumentSource(templateString);
+    console.log(s);
+
+}
+
+function createDocumentSource(templateSource) {
+    let htmlString = templateSource;
+    for (const name of Object.keys(documentValues)) {
+        const value = documentValues[name],
+                startIdx = htmlString.indexOf(`$[${name}`),
+                endIdx = htmlString.indexOf(']', startIdx + 1);
+        htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
+
+        //console.log(htmlString);
+    }
+    return htmlString;
+}
+
+async function run() {
+
+    //todo check if login data if available from LocalStorage ..
+
+    //injectDOM();
+
+
+    return;
+}
+
+async function cloneRepo(repoUrl) {
+    window.dir = '/tutorial'
+    console.log(dir);
+        
+    let readDir = [];
+    try {
+        readDir = await pfs.readdir(dir);
+    } catch (e) {
+
+    }
+    if (readDir.length === 0) {
+
+        let mkDir = await pfs.mkdir(dir);
+    }        
+        //const repoUrl = prompt('repo url?', 'https://github.com/isomorphic-git/isomorphic-git')
+
+        debugger;
+        // Behold - it is empty!
+        let readDir2 = await pfs.readdir(dir);
+
+        // Do I have to `clone` every time I want to access the files?
+        // Even after having `clone`d before if this does not happen every time
+        // it only contains `.git`!?
+
+        let cloneRes = await git.clone({
+            fs,
+            http,
+            dir,
+            corsProxy: 'https://cors.isomorphic-git.org',
+            url: repoUrl,//'https://github.com/isomorphic-git/isomorphic-git',
+            ref: 'main',
+            singleBranch: true,
+            depth: 1,
+            onAuth: url => {
+                const username = document.getElementById('user').value,
+                        pw = prompt('Password or Token, please.');
+                return {
+                    username: username,
+                    password: pw,
+                };
+            }
+        });
+
+        // Now it should not be empty...
+        let readDir3 = await pfs.readdir(dir);
+        //console.log("");
+
+        if (readDir3.includes('_templates')) {
+            let templateDir = await pfs.readdir(`${dir}/_templates`);
+
+            for (const templateFilePath of templateDir) {
+                let templateSource = await pfs.readfile(`${dir}/_templates/${templateFilePath}`);
+                let template = createTemplate(templateSource);
+            }
+
+        }
+
+  //  }
+}
+    </script>
+</html>
