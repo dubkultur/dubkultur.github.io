@@ -403,7 +403,7 @@ async function run() {
         }
     });
 
-    if (isCloned()) {
+    if (await isCloned()) {
         enable("clone", false);
         showProgress(true);
         setProgress(10);
