@@ -384,7 +384,7 @@ async function saveNewDocumentToRepo() {
         }
     });
     setProgress(80);
-    /*
+    
     try {
         const pushResult = await git.push({
             fs,
@@ -401,7 +401,7 @@ async function saveNewDocumentToRepo() {
     } catch (e) {
         alert('Sorry -.- Is your token OK?');
     }
-*/
+
     setProgress(100);
     setTimeout(() => {
         documentValues = {};
@@ -525,9 +525,7 @@ async function cloneRepo(localDir, repoUrl) {
 
     if (window.localStorage.getItem('repoUrl') === repoUrl) {
         if (readDir.length > 1) {
-
-            // todo pull
-            const pullResult = await git.pull({
+            await git.pull({
                 fs,
                 http,
                 dir: localDir,
@@ -537,9 +535,9 @@ async function cloneRepo(localDir, repoUrl) {
                     name: window.user,
                 }
             });
-            debugger;
 
             //if failed -> clean vfs and start over
+            //... but it just *always* !? seems to just work -.-
 
             setProgress(90);
             return;
