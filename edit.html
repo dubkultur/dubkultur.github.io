@@ -83,12 +83,38 @@ function enable(what, really) {
     }
 }
 
-function __called(name, type) {
-    const val = prompt('Neuer Inhalt?', documentValues[name].value);
-    if (val) {
-        documentValues[name].value = val;
-        document.getElementById(`__id_${name}`).innerText = documentValues[name].value;
-    }
+function __multiline_called(name) {
+    const multiDialog = document.getElementById('multidialog');
+    document.getElementById('multidialog_text').value = documentValues[name].value;
+    document.getElementById('multidialog_ok').addEventListener('click', () => {
+        const val = document.getElementById('multidialog_text').value;
+        if (val) {
+            documentValues[name].value = val;
+            document.getElementById(`__id_${name}`).innerText = documentValues[name].value;    
+        }
+        multiDialog.close();
+    });
+    document.getElementById('multidialog_cancel').addEventListener('click', () => {
+        multiDialog.close();
+    });
+    multiDialog.showModal();
+}
+
+function __called(name) {
+    const singleDialog = document.getElementById("singledialog");
+    singledialog_text.value = documentValues[name].value;
+    document.getElementById('singledialog_ok').addEventListener('click', () => {
+        const val = document.getElementById('singledialog_text').value;
+        if (val) {
+            documentValues[name].value = val;
+            document.getElementById(`__id_${name}`).innerText = documentValues[name].value;    
+        }
+        singleDialog.close();
+    });
+    document.getElementById('singledialog_cancel').addEventListener('click', () => {
+        singleDialog.close();
+    });
+    singleDialog.showModal();
 }
 
 function injectDOM(templateString) {
@@ -114,11 +140,20 @@ function injectDOM(templateString) {
                         </form>
                     </div>`;
             attachUploadHandlers.push(name);
-        } else {
+        } else if (type === 'MultiLineString') {
             val = `<button id='__id_${name}' 
                     onClick='(function() { 
-                        __called("${name}", "${type}"); 
+                        __multiline_called("${name}"); 
                     })();'>${name}</button>`;
+        } else {
+            if (name === 'now') {
+                val = new Date().toLocaleString('de-DE');
+            } else {
+                val = `<button id='__id_${name}' 
+                    onClick='(function() { 
+                        __called("${name}"); 
+                    })();'>${name}</button>`;
+            }
         }
         
         if (documentValues.hasOwnProperty(name)) {
@@ -128,6 +163,28 @@ function injectDOM(templateString) {
         return val;
     });
     const injectUIHtmlString = `
+    <dialog id="singledialog">
+  <form method="dialog">
+    <p>
+        <input id="singledialog_text" type="text" required />
+    </p>
+    <div>
+      <input type="submit" id="singledialog_ok" value="OK" />
+      <input type="submit" id="singledialog_cancel" value="Cancel" formnovalidate />
+    </div>
+  </form>
+</dialog>
+    <dialog id="multidialog">
+  <form method="dialog">
+    <p>
+        <textarea rows="5" id="multidialog_text" required></textarea>
+    </p>
+    <div>
+      <input type="submit" id="multidialog_ok" value="OK" />
+      <input type="submit" id="multidialog_cancel" value="Cancel" formnovalidate />
+    </div>
+  </form>
+</dialog>
         <button id='save' style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
             onClick='(function() { 
                 enable('save', false);
