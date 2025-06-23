@@ -90,6 +90,7 @@ function __multiline_called(name) {
         const val = document.getElementById('multidialog_text').value;
         if (val) {
             documentValues[name].value = val;
+            documentValues[name].initial = false;
             document.getElementById(`__id_${name}`).innerText = documentValues[name].value;    
         }
         multiDialog.close();
@@ -107,6 +108,7 @@ function __called(name) {
         const val = document.getElementById('singledialog_text').value;
         if (val) {
             documentValues[name].value = val;
+            documentValues[name].initial = false;
             document.getElementById(`__id_${name}`).innerText = documentValues[name].value;    
         }
         singleDialog.close();
@@ -159,7 +161,7 @@ function injectDOM(templateString) {
         if (documentValues.hasOwnProperty(name)) {
             console.log(`warn: The name '${name}' is already used!`);
         }
-        documentValues[name] = {value: name, type: type};
+        documentValues[name] = {value: name, type: type, initial: true};
         return val;
     });
     const injectUIHtmlString = `
@@ -213,6 +215,7 @@ function injectDOM(templateString) {
             
             documentValues[name].value = byteFile;
             documentValues[name].mimetype = file.type;
+            documentValues[name].initial = false;
             
             document.getElementById(`__preview_${name}`).src = imageUrl;
             document.getElementById(`__fid_${name}`).style = "visibility: hidden";
@@ -277,7 +280,9 @@ async function saveNewDocumentToRepo() {
         files = [],
         folders = [];
 
-    documentValues.now = now.toLocaleString('de-DE');
+    documentValues.now = {value: now.toLocaleString('de-DE'), initial: true};
+
+    let allValuesEmpty = true;
 
     let htmlString = templateSourceString;
     for (const name of Object.keys(documentValues)) {
@@ -285,12 +290,11 @@ async function saveNewDocumentToRepo() {
                 startIdx = htmlString.indexOf(`$[${name}`),
                 endIdx = htmlString.indexOf(']', startIdx + 1);
 
-                debugger;
-
         let value;
-        if (!documentValues[name]) {
+        if (!documentValues[name] || documentValues[name].initial) {
             value = '';
         } else {    
+            allValuesEmpty = false;
             if (type === 'Image') {
                 let suff;
                 if (documentValues[name].mimetype === 'image/jpeg') {
@@ -315,6 +319,16 @@ async function saveNewDocumentToRepo() {
         }
         htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
     }
+
+    if (allValuesEmpty) {
+        setProgress(100);
+        setTimeout(() => {
+            enable("save", true);
+            showProgress(false);
+        }, 500);
+        return;
+    }
+
     setProgress(20);
 
     await pfs.writeFile(`${localDir}/${filename}`, htmlString, 'utf8');
@@ -347,20 +361,23 @@ async function saveNewDocumentToRepo() {
         }
     });
     setProgress(70);
-    const pushResult = await git.push({
-        fs,
-        http,
-        dir: localDir,
-        remote: 'origin',
-        ref: 'main',
-        onAuth: () => ({ username: pw }),
-    });
-
-    if (!pushResult.ok) {
-        alert('Sorry -.- That did not work..');
+    try {
+        const pushResult = await git.push({
+            fs,
+            http,
+            dir: localDir,
+            remote: 'origin',
+            ref: 'main',
+            onAuth: () => ({ username: pw }),
+        });
+        console.log(pushResult);
+        if (!pushResult.ok) {
+            alert('Sorry -.- That did not work..');
+        }
+    } catch (e) {
+        alert('Sorry -.- Is your token OK?');
     }
-    console.log(pushResult);
-    
+
     setProgress(100);
     setTimeout(() => {
         enable("save", true);
@@ -403,7 +420,7 @@ async function run() {
         }
     });
 
-    if (await isCloned()) {
+    if (await isCloned(dir)) {
         enable("clone", false);
         showProgress(true);
         setProgress(10);
@@ -440,7 +457,7 @@ async function readRepo(localDir) {
     }
 }
 
-async function isCloned() {
+async function isCloned(localDir) {
     if (!window.localStorage.getItem('repoUrl') ||
         !window.localStorage.getItem('repoMail') ||
         !window.localStorage.getItem('repoUser')) {
