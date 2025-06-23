@@ -272,7 +272,8 @@ async function saveNewDocumentToRepo() {
         pagesDir = await preparePagesDir(localDir),
         now = new Date(),
         nowShort = `${now.getYear() - 100}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`,
-        fname = `pages/${nowShort}.html`,
+        fname = `${nowShort}.html`,
+        filename = `pages/${fname}`,
         files = [],
         folders = [];
 
@@ -297,15 +298,15 @@ async function saveNewDocumentToRepo() {
                 }
                 const len = files.length + 1,
                     foldername = `pages/files_${nowShort}`,
-                    fname = `${foldername}/img_${len}.${suff}`;
+                    filename = `${foldername}/img_${len}.${suff}`;
                 if (!folders.includes(foldername)) {
                     folders.push(foldername);
                 }
                 files.push({
-                    name: fname,
+                    name: filename,
                     content: documentValues[name].value
                 });
-                value = `<img src='/${fname}'>`;
+                value = `<img src='/${filename}'>`;
             }
         } else {
             value = documentValues[name].value;
@@ -314,8 +315,8 @@ async function saveNewDocumentToRepo() {
     }
     setProgress(20);
 
-    await pfs.writeFile(`${localDir}/${fname}`, htmlString, 'utf8');
-    await git.add({fs, dir: localDir, filepath: fname});
+    await pfs.writeFile(`${localDir}/${filename}`, htmlString, 'utf8');
+    await git.add({fs, dir: localDir, filepath: filename});
 
     pagesDir.push(fname);
     await pfs.writeFile(`${localDir}/blog.html`, await generateIndexHtml(pagesDir), 'utf8');
@@ -337,7 +338,7 @@ async function saveNewDocumentToRepo() {
     const sha = await git.commit({
         fs,
         dir: localDir,
-        message: `Added ${fname}.`,
+        message: `Added ${filename}.`,
         author: {
             name: user,
             email: email,
