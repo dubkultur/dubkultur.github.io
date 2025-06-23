@@ -271,53 +271,75 @@ async function saveNewDocumentToRepo() {
     }
 
     setProgress(30);
+    
+    documentValues.now = {value: now.toLocaleString('de-DE'), initial: true};
+
+    const allDocumentValues = [];
+    for (const srcJsonPath of pagesDir) {
+        if (srcJsonPath.endsWith('.json')) {
+            const srcJson = await pfs.readFile(`${localDir}/pages/${srcJsonPath}`);
+            const json = JSON.parse(srcJson);
+            allDocumentValues.push({data: json, isNew: false, name: srcJsonPath.substring(0, srcJsonPath.length - 5)});
+        }
+    }
+    allDocumentValues.push({data: documentValues, isNew: true});
+    setProgress(40);
+
     const localDir = dir,
         pagesDir = await preparePagesDir(localDir),
         now = new Date(),
         nowShort = `${now.getYear() - 100}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`,
         fname = `${nowShort}.html`,
-        filename = `pages/${fname}`,
-        files = [],
-        folders = [];
+        filename = `pages/${fname}`;
 
-    documentValues.now = {value: now.toLocaleString('de-DE'), initial: true};
+    for (const curDocumentValuesData of allDocumentValues) {
+        const isNew = curDocumentValuesData.isNew,
+            curDocumentValues = curDocumentValuesData.data,
+            files = [],
+            folders = [];
+        
+        let allValuesEmpty = true,
+            htmlString = templateSourceString;
 
-    let allValuesEmpty = true;
+        for (const name of Object.keys(curDocumentValues)) {
+            const type = curDocumentValues[name].type,
+                    startIdx = htmlString.indexOf(`$[${name}`),
+                    endIdx = htmlString.indexOf(']', startIdx + 1);
 
-    let htmlString = templateSourceString;
-    for (const name of Object.keys(documentValues)) {
-        const type = documentValues[name].type,
-                startIdx = htmlString.indexOf(`$[${name}`),
-                endIdx = htmlString.indexOf(']', startIdx + 1);
-
-        let value;
-        if (!documentValues[name] || documentValues[name].initial) {
-            value = '';
-        } else {    
-            allValuesEmpty = false;
-            if (type === 'Image') {
-                let suff;
-                if (documentValues[name].mimetype === 'image/jpeg') {
-                    suff = 'jpg';
+            let value;
+            if (!curDocumentValues[name] || curDocumentValues[name].initial) {
+                value = '';
+            } else {    
+                allValuesEmpty = false;
+                if (type === 'Image') {
+                    let suff;
+                    if (curDocumentValues[name].mimetype === 'image/jpeg') {
+                        suff = 'jpg';
+                    } else {
+                        suff = 'png';
+                    }
+                    const len = files.length + 1,
+                        foldername = `pages/files_${nowShort}`,
+                        filename = `${foldername}/img_${len}.${suff}`;
+                    if (isNew) {
+                        if (!folders.includes(foldername)) {
+                            folders.push(foldername);
+                        }
+                        files.push({
+                            name: filename,
+                            content: curDocumentValues[name].value
+                        });
+                    }
+                    value = `<img src='/${filename}'>`;
                 } else {
-                    suff = 'png';
+                    value = curDocumentValues[name].value;
                 }
-                const len = files.length + 1,
-                    foldername = `pages/files_${nowShort}`,
-                    filename = `${foldername}/img_${len}.${suff}`;
-                if (!folders.includes(foldername)) {
-                    folders.push(foldername);
-                }
-                files.push({
-                    name: filename,
-                    content: documentValues[name].value
-                });
-                value = `<img src='/${filename}'>`;
-            } else {
-                value = documentValues[name].value;
             }
+            htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
         }
-        htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
+        const targetFileName = isNew ? filename : curDocumentValuesData.name;
+        await pfs.writeFile(`${localDir}/${targetFileName}`, htmlString);
+        await git.add({fs, dir: localDir, filepath: targetFileName});
     }
 
     if (allValuesEmpty) {
@@ -329,13 +351,13 @@ async function saveNewDocumentToRepo() {
         return;
     }
 
-    setProgress(20);
+    setProgress(50);
 
-    await pfs.writeFile(`${localDir}/${filename}`, htmlString, 'utf8');
-    await git.add({fs, dir: localDir, filepath: filename});
+    await pfs.writeFile(`${localDir}/${filename}.json`, JSON.stringify(documentValues));
+    await git.add({fs, dir: localDir, filepath: `${filename}.json`});
 
     pagesDir.push(fname);
-    await pfs.writeFile(`${localDir}/blog.html`, await generateIndexHtml(pagesDir), 'utf8');
+    await pfs.writeFile(`${localDir}/blog.html`, await generateIndexHtml(pagesDir));
     await git.add({fs, dir: localDir, filepath: 'blog.html'});
 
     for (const folder of folders) {
@@ -350,7 +372,7 @@ async function saveNewDocumentToRepo() {
         await git.add({fs, dir: localDir, filepath: file.name});
     }
 
-    setProgress(60);
+    setProgress(70);
     const sha = await git.commit({
         fs,
         dir: localDir,
@@ -360,7 +382,8 @@ async function saveNewDocumentToRepo() {
             email: email,
         }
     });
-    setProgress(70);
+    setProgress(80);
+    /*
     try {
         const pushResult = await git.push({
             fs,
@@ -377,9 +400,11 @@ async function saveNewDocumentToRepo() {
     } catch (e) {
         alert('Sorry -.- Is your token OK?');
     }
-
+*/
     setProgress(100);
     setTimeout(() => {
+        curDocumentValues = {};
+        readRepo(localDir);
         enable("save", true);
         showProgress(false);
     }, 500);
