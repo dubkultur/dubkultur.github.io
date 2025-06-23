@@ -1,9 +1,6 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta charset="utf-8">
-        <style>
+    <style>
         html, body, .c {
             height: 95%;
         }
@@ -14,12 +11,40 @@
             justify-content: center;
             flex-direction: column;
         }
-        </style>
-        <title>DUBS</title>
-    </head>
+    </style>
+
     <body>
         <div class="c">
-            <h2>Welcome to my <a href='/blog.html'>blog</a>!</h2>
+            <img id="d" src="diskussion.png" />
+            <img id="u" src="ueber.png" />
+            <img id="b" src="bauweise.png" />
         </div>
     </body>
-<html>
+
+    <script>
+        const files = {
+            "d": ["diskussion.png", "draht.png", "droge.png", "drum.png", "dynamik.png"],
+            "u": ["ueber.png", "ueber2.png", "umso.png", "und.png", "unter.png", "unterstuetzt.png", "plus.png"],
+            "b": ["bass.png", "bauweise.png", "beats.png", "begeisterung.png", "besser.png", "bewegung.png"]
+        },
+        keys = Object.keys(files),
+        lastAr = {'k': -1, 'd': -1, 'u': -1, 'b': -1};
+
+        function r(max) {
+            return Math.floor(Math.random() * (Math.floor(max) - 1));
+        }
+
+        setInterval(() => {
+            let k, ar;
+            do {
+                k = keys[r(keys.length + 1)];
+            } while (lastAr['k'] === k);
+            lastAr['k'] = k;
+            do {
+                ar = r(files[k].length + 1);
+            } while (lastAr[k] === ar);
+            lastAr[k] = ar;
+            document.getElementById(k).src = files[k][ar];
+        }, 3000);
+    </script>
+</html>
