@@ -271,8 +271,15 @@ async function saveNewDocumentToRepo() {
     }
 
     setProgress(30);
-    
-    documentValues.now = {value: now.toLocaleString('de-DE'), initial: true};
+
+    const localDir = dir,
+        pagesDir = await preparePagesDir(localDir),
+        now = new Date(),
+        nowShort = `${now.getYear() - 100}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`,
+        fname = `${nowShort}.html`,
+        filename = `pages/${fname}`;
+
+        documentValues.now = {value: now.toLocaleString('de-DE'), initial: true};
 
     const allDocumentValues = [];
     for (const srcJsonPath of pagesDir) {
@@ -285,21 +292,15 @@ async function saveNewDocumentToRepo() {
     allDocumentValues.push({data: documentValues, isNew: true});
     setProgress(40);
 
-    const localDir = dir,
-        pagesDir = await preparePagesDir(localDir),
-        now = new Date(),
-        nowShort = `${now.getYear() - 100}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`,
-        fname = `${nowShort}.html`,
-        filename = `pages/${fname}`;
+    const files = [],
+          folders = [];
+    let allValuesEmpty = true;
 
     for (const curDocumentValuesData of allDocumentValues) {
         const isNew = curDocumentValuesData.isNew,
-            curDocumentValues = curDocumentValuesData.data,
-            files = [],
-            folders = [];
+            curDocumentValues = curDocumentValuesData.data;
         
-        let allValuesEmpty = true,
-            htmlString = templateSourceString;
+        let htmlString = templateSourceString;
 
         for (const name of Object.keys(curDocumentValues)) {
             const type = curDocumentValues[name].type,
@@ -403,7 +404,7 @@ async function saveNewDocumentToRepo() {
 */
     setProgress(100);
     setTimeout(() => {
-        curDocumentValues = {};
+        documentValues = {};
         readRepo(localDir);
         enable("save", true);
         showProgress(false);
@@ -435,7 +436,7 @@ async function generateIndexHtml(existingPages) {
 }
 
 const dir = '/dubs';
-const documentValues = {};
+let documentValues = {};
 let templateSourceString;
 
 async function run() {
@@ -524,6 +525,22 @@ async function cloneRepo(localDir, repoUrl) {
 
     if (window.localStorage.getItem('repoUrl') === repoUrl) {
         if (readDir.length > 1) {
+
+            // todo pull
+            const pullResult = await git.pull({
+                fs,
+                http,
+                dir: localDir,
+                ref: 'main',
+                singleBranch: true,
+                author: {
+                    name: window.user,
+                }
+            });
+            debugger;
+
+            //if failed -> clean vfs and start over
+
             setProgress(90);
             return;
         }
