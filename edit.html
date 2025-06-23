@@ -403,7 +403,18 @@ async function run() {
         }
     });
 
-    //todo check if login data if available from LocalStorage ..
+    if (isCloned()) {
+        enable("clone", false);
+        showProgress(true);
+        setProgress(10);
+
+        window.repo = window.localStorage.getItem('repoUrl');
+        window.email = window.localStorage.getItem('repoMail');
+        window.user = window.localStorage.getItem('repoUser');
+        
+        await cloneRepo(dir, repo);
+        await readRepo(dir);
+    }
 }
 
 async function initRepo() {
@@ -429,6 +440,30 @@ async function readRepo(localDir) {
     }
 }
 
+async function isCloned() {
+    if (!window.localStorage.getItem('repoUrl') ||
+        !window.localStorage.getItem('repoMail') ||
+        !window.localStorage.getItem('repoUser')) {
+        
+        return false;
+    }
+
+    let readDir = [];
+    try {
+        readDir = await pfs.readdir(localDir);
+    } catch (e) {
+        return false;
+    }
+
+    if (readDir.length === 0) {
+        return false;
+    }
+
+    readDir = await pfs.readdir(localDir);
+
+    return readDir.length > 1;
+}
+
 async function cloneRepo(localDir, repoUrl) {
     let readDir = [];
     try {
@@ -452,6 +487,8 @@ async function cloneRepo(localDir, repoUrl) {
         }
     } else {
         window.localStorage.setItem('repoUrl', repoUrl);
+        window.localStorage.setItem('repoMail', window.email);
+        window.localStorage.setItem('repoUser', window.user);
     }
 
     setProgress(10);
