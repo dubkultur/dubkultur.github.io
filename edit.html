@@ -317,10 +317,9 @@ async function saveNewDocumentToRepo() {
     await pfs.writeFile(`${localDir}/${fname}`, htmlString, 'utf8');
     await git.add({fs, dir: localDir, filepath: fname});
 
-    if (pagesDir.length > 0) {
-        await pfs.writeFile(`${localDir}/blog.html`, await generateIndexHtml(pagesDir), 'utf8');
-        await git.add({fs, dir: localDir, filepath: 'blog.html'});
-    }
+    pagesDir.push(fname);
+    await pfs.writeFile(`${localDir}/blog.html`, await generateIndexHtml(pagesDir), 'utf8');
+    await git.add({fs, dir: localDir, filepath: 'blog.html'});
 
     for (const folder of folders) {
         try {
