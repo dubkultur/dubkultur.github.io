@@ -285,32 +285,40 @@ async function saveNewDocumentToRepo() {
                 startIdx = htmlString.indexOf(`$[${name}`),
                 endIdx = htmlString.indexOf(']', startIdx + 1);
 
-        let value;
-        if (type === 'Image') {
-            if (!documentValues[name].mimetype) {
-                value = '';
-            } else {
-                let suff;
-                if (documentValues[name].mimetype === 'image/jpeg') {
-                    suff = 'jpg';
-                } else {
-                    suff = 'png';
-                }
-                const len = files.length + 1,
-                    foldername = `pages/files_${nowShort}`,
-                    filename = `${foldername}/img_${len}.${suff}`;
-                if (!folders.includes(foldername)) {
-                    folders.push(foldername);
-                }
-                files.push({
-                    name: filename,
-                    content: documentValues[name].value
-                });
-                value = `<img src='/${filename}'>`;
-            }
+                debugger;
+
+        if (!documentValues[name].value) {
+            value = '';
         } else {
-            value = documentValues[name].value;
+            let value;
+            if (type === 'Image') {
+                
+                if (!documentValues[name].mimetype) {
+                    value = '';
+                } else {
+                    let suff;
+                    if (documentValues[name].mimetype === 'image/jpeg') {
+                        suff = 'jpg';
+                    } else {
+                        suff = 'png';
+                    }
+                    const len = files.length + 1,
+                        foldername = `pages/files_${nowShort}`,
+                        filename = `${foldername}/img_${len}.${suff}`;
+                    if (!folders.includes(foldername)) {
+                        folders.push(foldername);
+                    }
+                    files.push({
+                        name: filename,
+                        content: documentValues[name].value
+                    });
+                    value = `<img src='/${filename}'>`;
+                }
+            } else {
+                value = documentValues[name].value;
+            }
         }
+
         htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
     }
     setProgress(20);
