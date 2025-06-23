@@ -15,9 +15,9 @@
 
     <body>
         <div class="c">
-            <img id="d" src="diskussion.png" />
-            <img id="u" src="ueber.png" />
-            <img id="b" src="bauweise.png" />
+            <img id="d" src="/res/img/diskussion.png" />
+            <img id="u" src="/res/img/ueber.png" />
+            <img id="b" src="/res/img/bauweise.png" />
         </div>
     </body>
 
@@ -44,7 +44,7 @@
                 ar = r(files[k].length + 1);
             } while (lastAr[k] === ar);
             lastAr[k] = ar;
-            document.getElementById(k).src = files[k][ar];
+            document.getElementById(k).src = `/res/img/${files[k][ar]}`;
         }, 3000);
     </script>
 </html>
