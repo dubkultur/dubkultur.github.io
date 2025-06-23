@@ -99,10 +99,15 @@ function __multiline_called(name) {
         multiDialog.close();
     });
     multiDialog.showModal();
+    setTimeout(() => {
+        const e = document.getElementById('multidialog_text');
+        e.select();
+        e.focus();
+    }, 1);
 }
 
 function __called(name) {
-    const singleDialog = document.getElementById("singledialog");
+    const singleDialog = document.getElementById('singledialog');
     singledialog_text.value = documentValues[name].value;
     document.getElementById('singledialog_ok').addEventListener('click', () => {
         const val = document.getElementById('singledialog_text').value;
@@ -117,6 +122,11 @@ function __called(name) {
         singleDialog.close();
     });
     singleDialog.showModal();
+    setTimeout(() => {
+        const e = document.getElementById('singledialog_text');
+        e.select();
+        e.focus();
+    }, 1);
 }
 
 function injectDOM(templateString) {
@@ -130,15 +140,19 @@ function injectDOM(templateString) {
 
         let val;
         if (type === 'Image') {
-            val = `<div style="display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-direction: row;">
-                        <img id='__preview_${name}' />
+            val = `<div>
+                        <div>
+                            <button type='submit' id='__file_clear_${name}' style='visibility:hidden;'>[X]</button>
+                        </div>
+                        <div><img style='max-width:90%;' id='__preview_${name}' /></div>
                         <form id='__fid_${name}'>
+                            <div>
                             <label for='__fileInput_${name}'>Choose an image:</label>
+                            </div>
+                            <div>
                             <input type='file' id='__fileInput_${name}' accept='image/png, image/jpeg' required>
-                            <button type='submit'>OK</button>
+                            </div>
+                            <button type='submit' id='__file_submit_${name}'>OK</button>
                         </form>
                     </div>`;
             attachUploadHandlers.push(name);
@@ -202,13 +216,10 @@ function injectDOM(templateString) {
         currentRoot = document.documentElement;
     document.replaceChild(newDocument.documentElement, currentRoot);
 
-    attachUploadHandlers.forEach(name => {
-        document.getElementById(`__fid_${name}`).addEventListener('submit', async function(event) {
-            event.preventDefault();
+    for (const name of attachUploadHandlers) {
 
-            const fileInput = document.getElementById(`__fileInput_${name}`),
-                file = fileInput.files[0],
-                byteFile = await getAsByteArray(file),
+        async function handleFile(file) {
+            const byteFile = await getAsByteArray(file),
                 blob = new Blob([byteFile], {type: file.type}),
                 urlCreator = window.URL || window.webkitURL,
                 imageUrl = urlCreator.createObjectURL(blob);
@@ -219,10 +230,32 @@ function injectDOM(templateString) {
             
             document.getElementById(`__preview_${name}`).src = imageUrl;
             document.getElementById(`__fid_${name}`).style = "visibility: hidden";
-            // todo this would be nice:
-            document.getElementById(`__preview_${name}`).addEventListener('onclick', () => document.getElementById(`__fid_${name}`).submit());
+            document.getElementById(`__file_clear_${name}`).style = "visibility: visible";
+        }
+
+        document.getElementById(`__file_clear_${name}`).addEventListener('click', () => {
+            // I don't know.. they say this should work.
+            //document.getElementById(`__fileInput_${name}`).value = null;
+
+            var input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/png, image/jpeg';
+            input.click();
+            input.onchange = e => { 
+                const file = e.target.files[0];
+                handleFile(file);
+            }
+
+            documentValues[name] = {};
         });
-    });
+        document.getElementById(`__fid_${name}`).addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const fileInput = document.getElementById(`__fileInput_${name}`),
+                file = fileInput.files[0];
+            handleFile(file);
+        });
+    }
 }
 
 function readFile(file) {
@@ -331,7 +364,7 @@ async function saveNewDocumentToRepo() {
                             content: curDocumentValues[name].value
                         });
                     }
-                    value = `<img src='/${filename}'>`;
+                    value = `<img src='/${filename}' style='max-width:90%;'>`;
                 } else {
                     value = curDocumentValues[name].value;
                 }
