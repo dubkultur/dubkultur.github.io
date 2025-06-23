@@ -338,7 +338,7 @@ async function saveNewDocumentToRepo() {
             }
             htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
         }
-        const targetFileName = isNew ? filename : curDocumentValuesData.name;
+        const targetFileName = isNew ? filename : `pages/${curDocumentValuesData.name}`;
         await pfs.writeFile(`${localDir}/${targetFileName}`, htmlString);
         await git.add({fs, dir: localDir, filepath: targetFileName});
     }
