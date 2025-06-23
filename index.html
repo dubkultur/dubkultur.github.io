@@ -34,17 +34,29 @@
             return Math.floor(Math.random() * (Math.floor(max) - 1));
         }
 
-        setInterval(() => {
-            let k, ar;
-            do {
-                k = keys[r(keys.length + 1)];
-            } while (lastAr['k'] === k);
-            lastAr['k'] = k;
-            do {
-                ar = r(files[k].length + 1);
-            } while (lastAr[k] === ar);
-            lastAr[k] = ar;
-            document.getElementById(k).src = `/res/img/${files[k][ar]}`;
-        }, 3000);
+        let interval;
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                clearInterval(interval);
+            } else {
+                startAnimation();
+            }
+        });
+
+        function startAnimation() {
+            interval = setInterval(() => {
+                let k, ar;
+                do {
+                    k = keys[r(keys.length + 1)];
+                } while (lastAr['k'] === k);
+                lastAr['k'] = k;
+                do {
+                    ar = r(files[k].length + 1);
+                } while (lastAr[k] === ar);
+                lastAr[k] = ar;
+                document.getElementById(k).src = `/res/img/${files[k][ar]}`;
+            },  3000);
+        }
+        startAnimation();
     </script>
 </html>
