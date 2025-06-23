@@ -186,8 +186,8 @@ function injectDOM(templateString) {
   </form>
 </dialog>
         <button id='save' style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
-            onClick='(function() { 
-                enable('save', false);
+            onClick='(function() {
+                enable("save", false);
                 showProgress(true);
                 setProgress(5);
                 saveNewDocumentToRepo(); 
@@ -251,6 +251,14 @@ async function preparePagesDir(localDir) {
     return pagesDir;
 }
 
+function pad(s) {
+    s = '' + s;
+    if (s.length < 2) {
+        return `0${s}`;
+    }
+    return s;
+}
+
 async function saveNewDocumentToRepo() {
     let pw = prompt('Password or Token, please.');
     if (!pw) {
@@ -262,10 +270,13 @@ async function saveNewDocumentToRepo() {
     setProgress(30);
     const localDir = dir,
         pagesDir = await preparePagesDir(localDir),
-        pagesLen = pagesDir.length + 1,
-        fname = `pages/page_${pagesLen}.html`,
+        now = new Date(),
+        nowShort = `${now.getYear() - 100}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`,
+        fname = `pages/${nowShort}.html`,
         files = [],
         folders = [];
+
+    documentValues.now = now.toLocaleString('de-DE');
 
     let htmlString = templateSourceString;
     for (const name of Object.keys(documentValues)) {
@@ -275,23 +286,27 @@ async function saveNewDocumentToRepo() {
 
         let value;
         if (type === 'Image') {
-            let suff;
-            if (documentValues[name].mimetype === 'image/jpeg') {
-                suff = 'jpg';
+            if (!documentValues[name].mimetype) {
+                value = '';
             } else {
-                suff = 'png';
+                let suff;
+                if (documentValues[name].mimetype === 'image/jpeg') {
+                    suff = 'jpg';
+                } else {
+                    suff = 'png';
+                }
+                const len = files.length + 1,
+                    foldername = `pages/files_${nowShort}`,
+                    fname = `${foldername}/img_${len}.${suff}`;
+                if (!folders.includes(foldername)) {
+                    folders.push(foldername);
+                }
+                files.push({
+                    name: fname,
+                    content: documentValues[name].value
+                });
+                value = `<img src='/${fname}'>`;
             }
-            const len = files.length + 1,
-                foldername = `pages/files_${pagesLen}`,
-                fname = `${foldername}/img_${len}.${suff}`;
-            if (!folders.includes(foldername)) {
-                folders.push(foldername);
-            }
-            files.push({
-                name: fname,
-                content: documentValues[name].value
-            });
-            value = `<img src='/${fname}'>`;
         } else {
             value = documentValues[name].value;
         }
@@ -302,8 +317,10 @@ async function saveNewDocumentToRepo() {
     await pfs.writeFile(`${localDir}/${fname}`, htmlString, 'utf8');
     await git.add({fs, dir: localDir, filepath: fname});
 
-    await pfs.writeFile(`${localDir}/index.html`, generateIndexHtml(pagesLen), 'utf8');
-    await git.add({fs, dir: localDir, filepath: 'index.html'});
+    if (pagesDir.length > 0) {
+        await pfs.writeFile(`${localDir}/blog.html`, await generateIndexHtml(pagesDir), 'utf8');
+        await git.add({fs, dir: localDir, filepath: 'blog.html'});
+    }
 
     for (const folder of folders) {
         try {
@@ -340,17 +357,23 @@ async function saveNewDocumentToRepo() {
     if (!pushResult.ok) {
         alert('Sorry -.- That did not work..');
     }
-    console.log(pushResult);    
+    console.log(pushResult);
+    
     setProgress(100);
     setTimeout(() => {
+        enable("save", true);
         showProgress(false);
     }, 500);
 }
 
-function generateIndexHtml(existingPages) {
+async function generateIndexHtml(existingPages) {
     let part = '';
-    for (let n = 1; n <= existingPages; n++) {
-        part = part + `<ol><a href="/pages/page_${n}.html">Page #${n}</ol>`;
+    for (let n = 0; n < existingPages.length; n++) {
+        const name = existingPages[n];
+        if (name.endsWith('.html')) {
+            const sName = name.substring(0, name.length - 5);
+            part = part + `<ol><a href="/pages/${name}">${sName}</ol>`;
+        }
     }
 
     return `<!DOCTYPE html>
