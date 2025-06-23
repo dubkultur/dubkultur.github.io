@@ -287,38 +287,32 @@ async function saveNewDocumentToRepo() {
 
                 debugger;
 
-        if (!documentValues[name].value) {
+        let value;
+        if (!documentValues[name]) {
             value = '';
-        } else {
-            let value;
+        } else {    
             if (type === 'Image') {
-                
-                if (!documentValues[name].mimetype) {
-                    value = '';
+                let suff;
+                if (documentValues[name].mimetype === 'image/jpeg') {
+                    suff = 'jpg';
                 } else {
-                    let suff;
-                    if (documentValues[name].mimetype === 'image/jpeg') {
-                        suff = 'jpg';
-                    } else {
-                        suff = 'png';
-                    }
-                    const len = files.length + 1,
-                        foldername = `pages/files_${nowShort}`,
-                        filename = `${foldername}/img_${len}.${suff}`;
-                    if (!folders.includes(foldername)) {
-                        folders.push(foldername);
-                    }
-                    files.push({
-                        name: filename,
-                        content: documentValues[name].value
-                    });
-                    value = `<img src='/${filename}'>`;
+                    suff = 'png';
                 }
+                const len = files.length + 1,
+                    foldername = `pages/files_${nowShort}`,
+                    filename = `${foldername}/img_${len}.${suff}`;
+                if (!folders.includes(foldername)) {
+                    folders.push(foldername);
+                }
+                files.push({
+                    name: filename,
+                    content: documentValues[name].value
+                });
+                value = `<img src='/${filename}'>`;
             } else {
                 value = documentValues[name].value;
             }
         }
-
         htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
     }
     setProgress(20);
