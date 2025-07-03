@@ -2,10 +2,10 @@
 
 You're just a few steps away from having your own self editing web page!
 
-- Create a GitHub (or GitLab or ...) account.
-- Get a token.
-- Fork this repo to <yourusername>.github.io.
-- Change everything.
+- Create a GitHub account `username`. 
+- Get a token at https://github.com/settings/tokens. 
+- Fork this repo to `username`.github.io.
+- Change everything & visit https://`username`.github.io
 
 Done :-)
 
