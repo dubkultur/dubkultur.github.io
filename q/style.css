@@ -1,0 +1,29 @@
+html, body {
+    height: 93%;
+}
+
+#filesdialog {
+    width: 50%;
+    min-width: 10rem;
+}
+
+#filesdialog ul {
+    padding: 0;
+}
+
+#filesdialog li {
+    margin: .1rem;
+    padding: .2rem;
+    background: #ddd; 
+}
+
+#filesdialog li:nth-child(odd) {
+    background: #ccc;
+}
+
+@media only screen and (min-width: 960px) {
+    /* styles for browsers larger than 960px; */
+    #filesdialog {
+        max-width: 50rem;
+    } 
+}
