@@ -66,33 +66,33 @@ export function showInitRepoDialog(http, pfs, fs) {
         e.select();
         e.focus();
     }, 1);
-
+    
+    attachClick('initdialog_ok', async () => {
     const user = byId('initdialog_user').value,
           email = byId('initdialog_email').value,
           repo = byId('initdialog_repo').value,
-          // todo use (and re-use) token if should be stored..
           token = byId('initdialog_token').value,
-          storeToken = byId('initdialog_store_token').value,
-          //progressDialog = progress('initdialog_progress'),
+          storeToken = byId('initdialog_store_token').checked,
           repoInfo = {
             user, 
             email, 
-            repo
+            repo,
+            token
           };
-    
-      attachClick('initdialog_ok', async () => {
-      //await cloneRepo();
 
-        //enable('initdialog_ok', false);
-        //progressDialog.showProgress(true);
-        
-        const progressDialog = initProgressDialog();
-        const repo = await initRepo(http, pfs, THE_ONE_AND_ONLY_LOCALDIR, repoInfo, progressDialog);
-        repoInfoToLocalStorage(repoInfo);
-        resolve(repo);
-      });
+    if (storeToken) {
+      window.localStorage.setItem('repoToken', token);
+    } else {
+      window.localStorage.removeItem('repoToken');
+    }
+
+    const progressDialog = initProgressDialog();
+    const repoObj = await initRepo(http, pfs, fs, THE_ONE_AND_ONLY_LOCALDIR, repoInfo, progressDialog);
+    repoInfoToLocalStorage(repoInfo);
+    dialog.close();
+    resolve(repoObj);
+    });
   });
-
 }
 
 // Maybe !?? better !!? do it like .. https://github.com/mdn/web-components-examples/blob/main/editable-list/main.js

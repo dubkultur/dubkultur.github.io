@@ -101,8 +101,8 @@ export async function cloneRepo(http, pfs, fs, localDir, repoInfo, progressHandl
         singleBranch: true,
         depth: 1,
         onAuth: url => {
-            const //username = user
-                    pw = repoInfo.token ? repoInfo.token : prompt('Password or Token, please.');
+            //const pw = repoInfo.token ? repoInfo.token : prompt('Password or Token, please.');
+            const pw = getToken(repoInfo);
             return {
                 username: pw,
                 //password: pw,
@@ -111,4 +111,15 @@ export async function cloneRepo(http, pfs, fs, localDir, repoInfo, progressHandl
     });
 
     progressHandler.setProgress(90);
+}
+
+function getToken(repoInfo) {
+    if (repoInfo.token) {
+        return repoInfo.token;
+    }
+    const storedValue = window.localStorage.getItem('repoToken');
+    if (storedValue) {
+        return storedValue;
+    }
+    return prompt('Password or Token, please.');
 }
