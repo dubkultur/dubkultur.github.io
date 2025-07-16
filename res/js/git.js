@@ -6,25 +6,57 @@ export async function initRepo(http, pfs, fs, localDir, repoInfo, progressHandle
     return ((pfs, localDir) => {
         return {
             listFiles: async () => {
-                //todo IMPL
-                //let readDir = await pfs.readdir(`${localDir}/pages/`);
-                //return ['index.html', ...readDir];
-                return [
-        'index.html', 'file1.html', 'file2.html', 'file3.html', 'file4.html',
-        'index.html', 'file1.html', 'file2.html', 'file3.html', 'file4.html'
-        ];
+                const readDir = await pfs.readdir(`${localDir}/pages/`);
+                return ['/index.html', ...readDir.map(e => `/pages/${e}`)];
             },
             readFile: async path => {
-                // todo properly read file or show template selection dialog to create a new file
-                //const srcJson = await pfs.readFile(`${localDir}/pages/${srcJsonPath}`);
-                return `<p>Hello World!</p>
-    <p>Some initial <strong>bold</strong> text</p>
-    <p><br /></p>`;
+                const raw = await pfs.readFile(`${localDir}${path}`),
+                    content = new TextDecoder().decode(raw);
+                return content;
             },
             writeFile: async (path, content) => {
-                // todo new pages must be created in /pages/; index is the only editable file in root
-                //await pfs.writeFile(`${localDir}/pages/${path}`, content);
-                throw 'IMPL';
+                await pfs.writeFile(`${localDir}${path}`, content);
+            },
+            commitModifications: async () => {
+                const readDir = await pfs.readdir(`${localDir}/pages/`);
+                const files = ['/index.html', ...readDir.map(e => `/pages/${e}`)];
+                const res = files.map(async f => {return {path: f, status: await git.status({ fs, dir: localDir, filepath: f.substr(1) })}});
+                const status = await Promise.all(res);
+                // todo Eventually there may be *new* files..
+                const modifiedFiles = status.filter(f => f.status.startsWith('*')).map(f => f.path);
+                for (const mf of modifiedFiles) {
+                    await git.add({fs, dir: localDir, filepath: mf.substr(1)});
+                }
+                // todo generate a fine message..
+                const sha = await git.commit({
+                    fs,
+                    dir: localDir,
+                    message: `Modified ${modifiedFiles.join(' ,')}.`,
+                    author: {
+                        name: repoInfo.user,
+                        email: repoInfo.email,
+                    }
+                });
+
+                /*
+                try {
+                    const pushResult = await git.push({
+                        fs,
+                        http,
+                        dir: localDir,
+                        remote: 'origin',
+                        ref: 'main',
+                        //onAuth: () => ({ username: getToken(repoInfo) }),
+                        onAuth: getOnAuth(repoInfo)
+                    });
+                    console.log(pushResult);
+                    if (!pushResult.ok) {
+                        alert('Sorry -.- That did not work..');
+                    }
+                } catch (e) {
+                    alert('Sorry -.- Is your token OK?');
+                }
+                */
             }
         };
     })(pfs, localDir);
@@ -100,17 +132,21 @@ export async function cloneRepo(http, pfs, fs, localDir, repoInfo, progressHandl
         ref: 'main',
         singleBranch: true,
         depth: 1,
-        onAuth: url => {
+        onAuth: getOnAuth(repoInfo)
+    });
+
+    progressHandler.setProgress(90);
+}
+
+function getOnAuth(repoInfo) {
+    return url => {
             //const pw = repoInfo.token ? repoInfo.token : prompt('Password or Token, please.');
             const pw = getToken(repoInfo);
             return {
                 username: pw,
                 //password: pw,
             };
-        }
-    });
-
-    progressHandler.setProgress(90);
+        };
 }
 
 function getToken(repoInfo) {

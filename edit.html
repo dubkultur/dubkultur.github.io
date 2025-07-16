@@ -73,6 +73,14 @@
 <script src="/res/vendor/quill_2.0.3/quill.js"></script>
 
 <script type="module">
+//import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
+import http from '/res/vendor/http.js'
+
+const fs = new LightningFS('fs'),
+    pfs = fs.promises;
+
+import { showInitRepoDialog, showSelectFileDialog } from '/res/js/self.js';
+
   // todo better use https://github.com/HimasRafeek/quilljs-floating-toolbar/blob/main/quill-floating-toolbar.js ?
     const toolbarOptions = [
                 ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
@@ -100,29 +108,18 @@
     theme: 'snow'
   });
 
-let lastDelta;
+let lastDelta,
+    ignoreDelta,
+    currentRepo,
+    currentFile;
+
 quill.on('text-change', function(delta) {
+  if (ignoreDelta) {
+    ignoreDelta = false;
+    return;
+  }
   lastDelta = true;
 });
-
-
-//import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
-import http from '/res/vendor/http.js'
-
-/*
-window.fs = new LightningFS('fs')
-window.pfs = window.fs.promises
-
-window.http = http;
-*/
-
-const fs = new LightningFS('fs'),
-    pfs = fs.promises;
-
-import { showInitRepoDialog, showSelectFileDialog } from '/res/js/self.js';
-
-let currentRepo,
-    currentFile;
 
 setInterval(async () => { 
   if (currentFile && lastDelta) {
@@ -141,13 +138,13 @@ window.onbeforeunload = function() {
 showInitRepoDialog(http, pfs, fs).then(async repo => {
   currentRepo = repo;
     const files = await repo.listFiles();
-    console.log(files);
 
     await showSelectFileDialog(files).then(async selectedFile => {
       if (selectedFile) {
         currentFile = selectedFile;
         const content = await repo.readFile(selectedFile);
         quill.root.innerHTML = content;
+        ignoreDelta = true;
       }
     });
 });

@@ -5,7 +5,7 @@ import { progress } from './progress.js';
 const THE_ONE_AND_ONLY_LOCALDIR = '/idk';
 
 function repoInfoToLocalStorage(repoInfo) {
-  window.localStorage.setItem('repoUrl', repoInfo.url);
+  window.localStorage.setItem('repoUrl', repoInfo.repo);
   window.localStorage.setItem('repoMail', repoInfo.email);
   window.localStorage.setItem('repoUser', repoInfo.user);
 }

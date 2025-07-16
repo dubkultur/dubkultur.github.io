@@ -31,5 +31,5 @@ export function attachClick(idOrEl, handler) {
 }
 
 export function sanitize(str) {
-    return str.replaceAll(/[^a-z0-9_\.]/gi, '');
+    return str.replaceAll(/[^a-z0-9_\.\/]/gi, '');
 }
