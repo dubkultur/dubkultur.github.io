@@ -5,7 +5,10 @@ export async function initRepo(http, pfs, fs, localDir, repoInfo, progressHandle
 
     return ((pfs, localDir) => {
         return {
-            listFiles: () => {
+            listFiles: async () => {
+                //todo IMPL
+                //let readDir = await pfs.readdir(`${localDir}/pages/`);
+                //return ['index.html', ...readDir];
                 return [
         'index.html', 'file1.html', 'file2.html', 'file3.html', 'file4.html',
         'index.html', 'file1.html', 'file2.html', 'file3.html', 'file4.html'
@@ -13,12 +16,15 @@ export async function initRepo(http, pfs, fs, localDir, repoInfo, progressHandle
             },
             readFile: async path => {
                 // todo properly read file or show template selection dialog to create a new file
+                //const srcJson = await pfs.readFile(`${localDir}/pages/${srcJsonPath}`);
                 return `<p>Hello World!</p>
     <p>Some initial <strong>bold</strong> text</p>
     <p><br /></p>`;
             },
             writeFile: async (path, content) => {
-                await pfs.writeFile(`${localDir}/${path}`, content);
+                // todo new pages must be created in /pages/; index is the only editable file in root
+                //await pfs.writeFile(`${localDir}/pages/${path}`, content);
+                throw 'IMPL';
             }
         };
     })(pfs, localDir);

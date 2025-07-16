@@ -3,7 +3,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="utf-8">
 
-    <link href="./style.css" rel="stylesheet" />
+    <link href="/res/style.css" rel="stylesheet" />
 
     <dialog id="filesdialog">
         <form method="dialog">
@@ -16,13 +16,13 @@
 
 
     <!--<script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>-->
-    <script src="/res/lightning-fs.js"></script>
+    <script src="/res/vendor/lightning-fs.js"></script>
     <!--<script src="https://unpkg.com/isomorphic-git"></script>-->
-    <script src="/res/isomorphic-git.js"></script>
+    <script src="/res/vendor/isomorphic-git.js"></script>
 
     <script type="module">
 //import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
-import http from '/res/http.js'
+import http from '/res/vendor/http.js'
 
 /*
 window.fs = new LightningFS('fs')
@@ -34,13 +34,10 @@ window.http = http;
 const fs = new LightningFS('fs'),
 pfs = fs.promises;
 
-import { showInitRepoDialog, showSelectFileDialog } from './js/self.js';
+import { showInitRepoDialog, showSelectFileDialog } from '/res/js/self.js';
 
 showInitRepoDialog(http, pfs, fs).then(async repo => {
-    debugger
     const files = await repo.listFiles();
-    console.log(files);
-
     await showSelectFileDialog(files).then(async selectedFile => {
       if (selectedFile) {
         const content = await repo.readFile(selectedFile);

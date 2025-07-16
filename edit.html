@@ -1,609 +1,155 @@
 <!DOCTYPE html>
 <html>
-    <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="utf-8">
-    <style>
-        html, body, .c {
-            height: 95%;
-        }
-        
-        .c {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-        }
 
-        .c input {
-            margin: 2rem;
-        }
-    </style>
+    <link href="/res/style.css" rel="stylesheet" />
+    <link href="/res/vendor/quill_2.0.3/quill.snow.css" rel="stylesheet" />
 
-    <!--<script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>-->
-    <script src="/res/lightning-fs.js"></script>
-    <!--<script src="https://unpkg.com/isomorphic-git"></script>-->
-    <script src="/res/isomorphic-git.js"></script>
+<!-- Create the editor container -->
+<div id="editor">
+  <!--
+  <p>Hello World!</p>
+  <p>Some initial <strong>bold</strong> text</p>
+  <p><br /></p>
+  -->
+</div>
 
-    <script type="module">
-    //import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
-    import http from '/res/http.js'
-    
-    window.fs = new LightningFS('fs')
-    window.pfs = window.fs.promises
-
-    window.http = http;
-    run();
-    </script>
-    <title>DUBS</title>
-    </head>
-    <body>
-        <div class="c">
-            <h1>Please clone:</h1>
-            
-            <label for="user">Username:</label>
-            <input type="text" id="user" name="user" required size="30" value="dubkultur" />
-            
-            <label for="email">Email:</label>
-            <input type="text" id="email" name="email" required size="30" value="dubkultur.hn@gmail.com" />
-            
-            <label for="repo">Repository:</label>
-            <input type="text" id="repo" name="repo" required size="40" value="https://github.com/dubkultur/dubkultur.github.io.git" />
-            
-            <!--
-            <label for="token">Token:</label>
-            <input type="password" id="token" name="token" required size="10" />
-            -->
-
-            <progress id="progress" value="0" max="100" style="visibility: hidden;"></progress>
-
-            <button id='clone' onClick='(function() { 
-                    enable("clone", false);
-                    showProgress(true);
-                    setProgress(5);
-                    initRepo();  
-                })();'>Clone now!</button>
+<dialog id="initdialog">
+  <form method="dialog">
+    <p>
+        <div>
+            <label for="initdialog_user">Username:</label>
         </div>
-    </body>
-
-    <script>
-
-function setProgress(num) {
-    document.getElementById("progress").value = num;
-}
-
-function showProgress(show) {
-    document.getElementById("progress").style = "visibility: " + (show ? "visible" : "hidden");
-}
-
-function enable(what, really) {
-    if (really) {
-        document.getElementById(what).removeAttribute("disabled");
-    } else {
-        document.getElementById(what).setAttribute("disabled", "disabled");
-    }
-}
-
-function __multiline_called(name) {
-    const multiDialog = document.getElementById('multidialog');
-    document.getElementById('multidialog_text').value = documentValues[name].value;
-    document.getElementById('multidialog_ok').addEventListener('click', () => {
-        const val = document.getElementById('multidialog_text').value;
-        if (val) {
-            documentValues[name].value = val;
-            documentValues[name].initial = false;
-            document.getElementById(`__id_${name}`).innerText = documentValues[name].value;    
-        }
-        multiDialog.close();
-    });
-    document.getElementById('multidialog_cancel').addEventListener('click', () => {
-        multiDialog.close();
-    });
-    multiDialog.showModal();
-    setTimeout(() => {
-        const e = document.getElementById('multidialog_text');
-        e.select();
-        e.focus();
-    }, 1);
-}
-
-function __called(name) {
-    const singleDialog = document.getElementById('singledialog');
-    singledialog_text.value = documentValues[name].value;
-    document.getElementById('singledialog_ok').addEventListener('click', () => {
-        const val = document.getElementById('singledialog_text').value;
-        if (val) {
-            documentValues[name].value = val;
-            documentValues[name].initial = false;
-            document.getElementById(`__id_${name}`).innerText = documentValues[name].value;    
-        }
-        singleDialog.close();
-    });
-    document.getElementById('singledialog_cancel').addEventListener('click', () => {
-        singleDialog.close();
-    });
-    singleDialog.showModal();
-    setTimeout(() => {
-        const e = document.getElementById('singledialog_text');
-        e.select();
-        e.focus();
-    }, 1);
-}
-
-function injectDOM(templateString) {
-    const attachUploadHandlers = [];
-    const htmlString = templateString.replaceAll(/\$\[([^\\]+?)\]/gi, (m, p1) => {
-        const splitVal = p1.split(':'),
-                // why do templator author have to specify a name they cannot reference? ;-) 
-                // could just generate a random identifier and care only about type..
-                name = splitVal[0],
-                type = splitVal.length > 1 ? splitVal[1] : '';
-
-        let val;
-        if (type === 'Image') {
-            val = `<div>
-                        <div>
-                            <button type='submit' id='__file_clear_${name}' style='visibility:hidden;'>[X]</button>
-                        </div>
-                        <div><img style='max-width:90%;' id='__preview_${name}' /></div>
-                        <form id='__fid_${name}'>
-                            <div>
-                            <label for='__fileInput_${name}'>Choose an image:</label>
-                            </div>
-                            <div>
-                            <input type='file' id='__fileInput_${name}' accept='image/png, image/jpeg' required>
-                            </div>
-                            <button type='submit' id='__file_submit_${name}'>OK</button>
-                        </form>
-                    </div>`;
-            attachUploadHandlers.push(name);
-        } else if (type === 'MultiLineString') {
-            val = `<button id='__id_${name}' 
-                    onClick='(function() { 
-                        __multiline_called("${name}"); 
-                    })();'>${name}</button>`;
-        } else {
-            if (name === 'now') {
-                val = new Date().toLocaleString('de-DE');
-            } else {
-                val = `<button id='__id_${name}' 
-                    onClick='(function() { 
-                        __called("${name}"); 
-                    })();'>${name}</button>`;
-            }
-        }
-        
-        if (documentValues.hasOwnProperty(name)) {
-            console.log(`warn: The name '${name}' is already used!`);
-        }
-        documentValues[name] = {value: name, type: type, initial: true};
-        return val;
-    });
-    const injectUIHtmlString = `
-    <dialog id="singledialog">
-  <form method="dialog">
-    <p>
-        <input id="singledialog_text" type="text" required />
+        <input type="text" id="initdialog_user" name="user" required size="40" value="dubkultur" />
     </p>
-    <div>
-      <input type="submit" id="singledialog_ok" value="OK" />
-      <input type="submit" id="singledialog_cancel" value="Cancel" formnovalidate />
-    </div>
-  </form>
-</dialog>
-    <dialog id="multidialog">
-  <form method="dialog">
     <p>
-        <textarea rows="5" id="multidialog_text" required></textarea>
+        <div>
+            <label for="initdialog_email">Email:</label>
+        </div>
+        <input type="text" id="initdialog_email" name="email" required size="40" value="dubkultur.hn@gmail.com" />
+    </p>     
+    <p>
+        <div>
+            <label for="initdialog_repo">Repository:</label>
+        </div>
+        <input type="text" id="initdialog_repo" name="repo" required size="40" value="https://github.com/dubkultur/dubkultur.github.io.git" />
     </p>
-    <div>
-      <input type="submit" id="multidialog_ok" value="OK" />
-      <input type="submit" id="multidialog_cancel" value="Cancel" formnovalidate />
-    </div>
-  </form>
-</dialog>
-        <button id='save' style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
-            onClick='(function() {
-                enable("save", false);
-                showProgress(true);
-                setProgress(5);
-                saveNewDocumentToRepo(); 
-            })();'>
-                Speichern!
-        </button>
-        <progress id="progress" value="0" max="100" style="visibility: hidden;"></progress>`;
-    const parser = new DOMParser(),
-        newDocument = parser.parseFromString(injectUIHtmlString  + htmlString, 'text/html'),
-        currentRoot = document.documentElement;
-    document.replaceChild(newDocument.documentElement, currentRoot);
-
-    for (const name of attachUploadHandlers) {
-
-        async function handleFile(file) {
-            const byteFile = await getAsByteArray(file),
-                blob = new Blob([byteFile], {type: file.type}),
-                urlCreator = window.URL || window.webkitURL,
-                imageUrl = urlCreator.createObjectURL(blob);
-            
-            documentValues[name].value = byteFile;
-            documentValues[name].mimetype = file.type;
-            documentValues[name].initial = false;
-            
-            document.getElementById(`__preview_${name}`).src = imageUrl;
-            document.getElementById(`__fid_${name}`).style = "visibility: hidden";
-            document.getElementById(`__file_clear_${name}`).style = "visibility: visible";
-        }
-
-        document.getElementById(`__file_clear_${name}`).addEventListener('click', () => {
-            // I don't know.. they say this should work.
-            //document.getElementById(`__fileInput_${name}`).value = null;
-
-            var input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/png, image/jpeg';
-            input.click();
-            input.onchange = e => { 
-                const file = e.target.files[0];
-                handleFile(file);
-            }
-
-            documentValues[name] = {};
-        });
-        document.getElementById(`__fid_${name}`).addEventListener('submit', async function(event) {
-            event.preventDefault();
-
-            const fileInput = document.getElementById(`__fileInput_${name}`),
-                file = fileInput.files[0];
-            handleFile(file);
-        });
-    }
-}
-
-function readFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener('loadend', e => resolve(e.target.result));
-    reader.addEventListener('error', reject);
-    reader.readAsArrayBuffer(file);
-  })
-}
-
-async function getAsByteArray(file) {
-  return new Uint8Array(await readFile(file));
-}
-
-async function preparePagesDir(localDir) {
-    let pagesDir = [];
-    try {
-        pagesDir = await pfs.readdir(`${localDir}/pages`);
-    } catch (e) {
-    }
-
-    if (pagesDir.length === 0) {
-        try {
-            await pfs.mkdir(`${localDir}/pages`);
-        } catch(e) {
-        }
-    }
-    return pagesDir;
-}
-
-function pad(s) {
-    s = '' + s;
-    if (s.length < 2) {
-        return `0${s}`;
-    }
-    return s;
-}
-
-async function saveNewDocumentToRepo() {
-    let pw = prompt('Password or Token, please.');
-    if (!pw) {
-        showProgress(false);
-        enable('save', true);
-        return;
-    }
-
-    setProgress(30);
-
-    const localDir = dir,
-        pagesDir = await preparePagesDir(localDir),
-        now = new Date(),
-        nowShort = `${now.getYear() - 100}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`,
-        fname = `${nowShort}.html`,
-        filename = `pages/${fname}`;
-
-        documentValues.now = {value: now.toLocaleString('de-DE'), initial: true};
-
-    const allDocumentValues = [];
-    for (const srcJsonPath of pagesDir) {
-        if (srcJsonPath.endsWith('.json')) {
-            const srcJson = await pfs.readFile(`${localDir}/pages/${srcJsonPath}`);
-            const json = JSON.parse(srcJson);
-            allDocumentValues.push({data: json, isNew: false, name: srcJsonPath.substring(0, srcJsonPath.length - 5)});
-        }
-    }
-    allDocumentValues.push({data: documentValues, isNew: true});
-    setProgress(40);
-
-    const files = [],
-          folders = [];
-    let allValuesEmpty = true;
-
-    for (const curDocumentValuesData of allDocumentValues) {
-        const isNew = curDocumentValuesData.isNew,
-            curDocumentValues = curDocumentValuesData.data;
-        
-        let htmlString = templateSourceString;
-
-        for (const name of Object.keys(curDocumentValues)) {
-            const type = curDocumentValues[name].type,
-                    startIdx = htmlString.indexOf(`$[${name}`),
-                    endIdx = htmlString.indexOf(']', startIdx + 1);
-
-            let value;
-            if (!curDocumentValues[name] || curDocumentValues[name].initial) {
-                value = '';
-            } else {    
-                allValuesEmpty = false;
-                if (type === 'Image') {
-                    let suff;
-                    if (curDocumentValues[name].mimetype === 'image/jpeg') {
-                        suff = 'jpg';
-                    } else {
-                        suff = 'png';
-                    }
-                    const len = files.length + 1,
-                        foldername = `pages/files_${nowShort}`,
-                        filename = `${foldername}/img_${len}.${suff}`;
-                    if (isNew) {
-                        if (!folders.includes(foldername)) {
-                            folders.push(foldername);
-                        }
-                        files.push({
-                            name: filename,
-                            content: curDocumentValues[name].value
-                        });
-                    }
-                    value = `<img src='/${filename}' style='max-width:90%;'>`;
-                } else {
-                    value = curDocumentValues[name].value;
-                }
-            }
-            htmlString = htmlString.substring(0, startIdx) + value + htmlString.substring(endIdx + 1, htmlString.length);
-        }
-        const targetFileName = isNew ? filename : `pages/${curDocumentValuesData.name}`;
-        await pfs.writeFile(`${localDir}/${targetFileName}`, htmlString);
-        await git.add({fs, dir: localDir, filepath: targetFileName});
-    }
-
-    if (allValuesEmpty) {
-        setProgress(100);
-        setTimeout(() => {
-            enable("save", true);
-            showProgress(false);
-        }, 500);
-        return;
-    }
-
-    setProgress(50);
-
-    await pfs.writeFile(`${localDir}/${filename}.json`, JSON.stringify(documentValues));
-    await git.add({fs, dir: localDir, filepath: `${filename}.json`});
-
-    pagesDir.push(fname);
-    await pfs.writeFile(`${localDir}/blog.html`, await generateIndexHtml(pagesDir));
-    await git.add({fs, dir: localDir, filepath: 'blog.html'});
-
-    for (const folder of folders) {
-        try {
-            await pfs.mkdir(`${localDir}/${folder}`);
-        } catch(e) {
-        }
-    }
-
-    for (const file of files) {
-        await pfs.writeFile(`${localDir}/${file.name}`, file.content);
-        await git.add({fs, dir: localDir, filepath: file.name});
-    }
-
-    setProgress(70);
-    const sha = await git.commit({
-        fs,
-        dir: localDir,
-        message: `Added ${filename}.`,
-        author: {
-            name: user,
-            email: email,
-        }
-    });
-    setProgress(80);
+    <p>
+        <div>
+            <label for="initdialog_token">Token:</label>
+        </div>
+        <input type="password" id="initdialog_token" name="token" required size="40" />
+    </p>
+    <p>
+        <label for="initdialog_store_token">Store token in LocalStorage?</label>
+        <input type="checkbox" id="initdialog_store_token" />
+    </p>
     
-    try {
-        const pushResult = await git.push({
-            fs,
-            http,
-            dir: localDir,
-            remote: 'origin',
-            ref: 'main',
-            onAuth: () => ({ username: pw }),
-        });
-        console.log(pushResult);
-        if (!pushResult.ok) {
-            alert('Sorry -.- That did not work..');
-        }
-    } catch (e) {
-        alert('Sorry -.- Is your token OK?');
-    }
+    <div style="align-items: end; display: flex;justify-content: end;">
+      <input type="submit" id="initdialog_ok" value="OK" />
+      <!-- Why be able to edit if you have nothing to clone !?
+      <input type="submit" id="initdialog_cancel" value="Cancel" formnovalidate />
+      -->
+    </div>
+    <progress id="initdialog_progress" value="0" max="100" style="visibility: hidden; width: 100%;"></progress>
+  </form>
+</dialog>
 
-    setProgress(100);
-    setTimeout(() => {
-        documentValues = {};
-        readRepo(localDir);
-        enable("save", true);
-        showProgress(false);
-    }, 500);
+<dialog id="filesdialog">
+  <form method="dialog">
+      <ul id="filesdialog_items"></ul>
+      <div style="align-items: end; display: flex;justify-content: end;">
+          <input type="submit" id="filesdialog_cancel" value="Cancel" />
+      </div>
+  </form>
+</dialog>
+
+<!--<script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>-->
+<script src="/res/vendor/lightning-fs.js"></script>
+<!--<script src="https://unpkg.com/isomorphic-git"></script>-->
+<script src="/res/vendor/isomorphic-git.js"></script>
+<!-- <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script> -->
+<script src="/res/vendor/quill_2.0.3/quill.js"></script>
+
+<script type="module">
+  // todo better use https://github.com/HimasRafeek/quilljs-floating-toolbar/blob/main/quill-floating-toolbar.js ?
+    const toolbarOptions = [
+                ['bold', 'italic', 'underline', 'strike'],        // toggled buttons
+                ['blockquote', 'code-block'],
+
+                [{ 'header': 1 }, { 'header': 2 }],               // custom button values
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                //[{ 'script': 'sub'}, { 'script': 'super' }],      // superscript/subscript
+                [{ 'indent': '-1'}, { 'indent': '+1' }],          // outdent/indent
+                //[{ 'direction': 'rtl' }],                         // text direction
+
+                [{ 'size': ['small', false, 'large', 'huge'] }],  // custom dropdown
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [ 'link', 'image', 'video', 'formula' ],          // add's image support
+                [{ 'color': [] }, { 'background': [] }],          // dropdown with defaults from theme
+                [{ 'font': [] }],
+                [{ 'align': [] }],
+
+                ['clean']                                         // remove formatting button
+            ];
+  const quill = new Quill('#editor', {
+    modules: {
+                toolbar: toolbarOptions
+            },
+    theme: 'snow'
+  });
+
+let lastDelta;
+quill.on('text-change', function(delta) {
+  lastDelta = true;
+});
+
+
+//import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
+import http from '/res/vendor/http.js'
+
+/*
+window.fs = new LightningFS('fs')
+window.pfs = window.fs.promises
+
+window.http = http;
+*/
+
+const fs = new LightningFS('fs'),
+    pfs = fs.promises;
+
+import { showInitRepoDialog, showSelectFileDialog } from '/res/js/self.js';
+
+let currentRepo,
+    currentFile;
+
+setInterval(async () => { 
+  if (currentFile && lastDelta) {
+    const html = quill.root.innerHTML;
+    currentRepo.writeFile(currentFile, html);
+    lastDelta = false;
+  }
+}, 5 * 1000);
+
+window.onbeforeunload = function() {
+  if (lastDelta) {
+    return 'There are unsaved changes. Are you sure you want to leave?';
+  }
 }
 
-async function generateIndexHtml(existingPages) {
-    let part = '';
-    for (let n = 0; n < existingPages.length; n++) {
-        const name = existingPages[n];
-        if (name.endsWith('.html')) {
-            const sName = name.substring(0, name.length - 5);
-            part = part + `<ol><a href="/pages/${name}">${sName}</ol>`;
-        }
-    }
+showInitRepoDialog(http, pfs, fs).then(async repo => {
+  currentRepo = repo;
+    const files = await repo.listFiles();
+    console.log(files);
 
-    return `<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta charset="utf-8">
-</head>
-<body>
-<ul>
-    ${part}
-</ul>
-</body>
-<html>`;
-}
-
-const dir = '/dubs';
-let documentValues = {};
-let templateSourceString;
-
-async function run() {
-    document.getElementById('repo').addEventListener('keydown', e => {
-        if (e.code === "Enter") {
-            initRepo();
-        }
+    await showSelectFileDialog(files).then(async selectedFile => {
+      if (selectedFile) {
+        currentFile = selectedFile;
+        const content = await repo.readFile(selectedFile);
+        quill.root.innerHTML = content;
+      }
     });
-
-    if (await isCloned(dir)) {
-        enable("clone", false);
-        showProgress(true);
-        setProgress(10);
-
-        window.repo = window.localStorage.getItem('repoUrl');
-        window.email = window.localStorage.getItem('repoMail');
-        window.user = window.localStorage.getItem('repoUser');
-        
-        await cloneRepo(dir, repo);
-        await readRepo(dir);
-    }
-}
-
-async function initRepo() {
-    window.user = document.getElementById("user").value;
-    window.email = document.getElementById("email").value;
-    window.repo = document.getElementById("repo").value;
-
-    await cloneRepo(dir, repo);
-    await readRepo(dir);
-}
-
-async function readRepo(localDir) {
-    let readDir = await pfs.readdir(localDir);
-    if (readDir.includes('_templates')) {
-        let templateDir = await pfs.readdir(`${localDir}/_templates`);
-// todo show menu to let user select which template to use
-        for (const templateFilePath of templateDir) {
-            const templateSource = await pfs.readFile(`${localDir}/_templates/${templateFilePath}`);
-            templateSourceString = new TextDecoder().decode(templateSource);
-            setProgress(80);
-            injectDOM(templateSourceString);
-        }
-    }
-}
-
-async function isCloned(localDir) {
-    if (!window.localStorage.getItem('repoUrl') ||
-        !window.localStorage.getItem('repoMail') ||
-        !window.localStorage.getItem('repoUser')) {
-        
-        return false;
-    }
-
-    let readDir = [];
-    try {
-        readDir = await pfs.readdir(localDir);
-    } catch (e) {
-        return false;
-    }
-
-    if (readDir.length === 0) {
-        return false;
-    }
-
-    readDir = await pfs.readdir(localDir);
-
-    return readDir.length > 1;
-}
-
-async function cloneRepo(localDir, repoUrl) {
-    let readDir = [];
-    try {
-        readDir = await pfs.readdir(localDir);
-    } catch (e) {
-    }
-
-    if (readDir.length === 0) {
-        try {
-            await pfs.mkdir(localDir);
-        } catch(e) {
-        }
-    }
-
-    readDir = await pfs.readdir(localDir);
-
-    if (window.localStorage.getItem('repoUrl') === repoUrl) {
-        if (readDir.length > 1) {
-            await git.pull({
-                fs,
-                http,
-                dir: localDir,
-                ref: 'main',
-                singleBranch: true,
-                author: {
-                    name: window.user,
-                }
-            });
-
-            //if failed -> clean vfs and start over
-            //... but it just *always* !? seems to just work -.-
-
-            setProgress(90);
-            return;
-        }
-    } else {
-        window.localStorage.setItem('repoUrl', repoUrl);
-        window.localStorage.setItem('repoMail', window.email);
-        window.localStorage.setItem('repoUser', window.user);
-    }
-
-    setProgress(10);
-    // todo is there a callback to show progress while cloning?
-    let cloneRes = await git.clone({
-        fs,
-        http,
-        dir: localDir,
-        corsProxy: 'https://cors.isomorphic-git.org',
-        url: repoUrl,//'https://github.com/isomorphic-git/isomorphic-git',
-        ref: 'main',
-        singleBranch: true,
-        depth: 1,
-        onAuth: url => {
-            const username = user
-                    pw = prompt('Password or Token, please.');
-            return {
-                username: pw,
-                //password: pw,
-            };
-        }
-    });
-
-    setProgress(90);
-}
-    </script>
+});
+</script>
 </html>
