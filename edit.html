@@ -6,13 +6,27 @@
     <link href="/res/style.css" rel="stylesheet" />
     <link href="/res/vendor/quill_2.0.3/quill.snow.css" rel="stylesheet" />
 
-<!-- Create the editor container -->
-<div id="editor">
-  <!--
-  <p>Hello World!</p>
-  <p>Some initial <strong>bold</strong> text</p>
-  <p><br /></p>
-  -->
+<div id="editor"></div>
+
+<div id="editdialog">
+  <!-- open file / preview / revert current file / revert all changes (modified and added files) / deploy -->
+
+  <button style="margin-right:1rem" id="select_file_button"> 
+    <img src="/res/vendor/bootstrap/folder2-open.svg" class="red" alt="Open file" width="32" height="32">
+  </button>
+
+  <button style="margin-right:1rem" id="preview_button"> 
+    <img src="/res/vendor/bootstrap/binoculars.svg" class="red" alt="Show preview" width="32" height="32">
+  </button>
+  <button id="revert_current_button">
+    <img src="/res/vendor/bootstrap/file-earmark-x.svg" class="red" alt="Revert current file" width="32" height="32">
+  </button>
+  <button style="margin-right:1rem" id="revert_all_button">
+    <img src="/res/vendor/bootstrap/journal-x.svg" alt="Revert all files" width="32" height="32">
+  </button>
+  <button id="deploy_button">
+    <img src="/res/vendor/bootstrap/rocket-takeoff.svg" alt="Deploy" width="32" height="32">
+  </button>
 </div>
 
 <dialog id="initdialog">
@@ -57,11 +71,35 @@
 </dialog>
 
 <dialog id="filesdialog">
+    <form method="dialog">
+        Pick an existing file:
+        <ul id="filesdialog_items"></ul>
+        <div id="filesdialog_new_container" style="visibility: hidden;">
+            Or create a new file:
+            <br />
+            <input type="text" id="filesdialog_new_value" size="40">&nbsp;
+            <input type="submit" id="filesdialog_new" value="Create File" />
+        </div>
+        
+        <div id="filesdialog_cancel_container" style="align-items: end; display: flex;justify-content: end;visibility: hidden;">
+            <input type="submit" id="filesdialog_cancel" value="Cancel" />
+        </div>
+    </form>
+</dialog>
+
+<dialog id="commitdialog">
   <form method="dialog">
-      <ul id="filesdialog_items"></ul>
-      <div style="align-items: end; display: flex;justify-content: end;">
-          <input type="submit" id="filesdialog_cancel" value="Cancel" />
-      </div>
+    <p>
+        <div>
+            <label for="commitdialog_message">Commit Message:</label>
+        </div>
+        <textarea id="commitdialog_message" name="commitdialog_message" required rows="4"></textarea>
+    </p>
+    <div style="align-items: end; display: flex;justify-content: end;">
+      <input type="submit" id="commitdialog_ok" value="OK" style="margin-right:1rem" />
+      <input type="submit" id="commitdialog_cancel" value="Cancel" formnovalidate />
+    </div>
+    <progress id="commitdialog_progress" value="0" max="100" style="visibility: hidden; width: 100%;"></progress>
   </form>
 </dialog>
 
@@ -79,6 +117,7 @@ import http from '/res/vendor/http.js'
 const fs = new LightningFS('fs'),
     pfs = fs.promises;
 
+import { attachClick } from '/res/js/doc_utils.js';
 import { showInitRepoDialog, showSelectFileDialog } from '/res/js/self.js';
 
   // todo better use https://github.com/HimasRafeek/quilljs-floating-toolbar/blob/main/quill-floating-toolbar.js ?
@@ -135,18 +174,48 @@ window.onbeforeunload = function() {
   }
 }
 
+async function setCurrentFile(file, isNew) {
+  currentFile = file;
+  if (isNew) {
+    await currentRepo.writeFile(currentFile, '');
+    quill.root.innerHTML = '';
+  } else {
+    const content = await currentRepo.readFile(currentFile);
+    quill.root.innerHTML = content;
+  }
+  ignoreDelta = true;
+}
+
+async function localShowSelectFileDialog() {
+  const files = await currentRepo.listFiles();
+  await showSelectFileDialog(files, {allowNew: true}).then(async selectedFile => {
+    if (selectedFile) {
+      const isNew = selectedFile.isNew;
+      selectedFile = selectedFile.value;
+      if (!selectedFile.startsWith('/')) {
+        selectedFile = `/pages/${currentFile}`;
+      }
+      await setCurrentFile(selectedFile, isNew);
+    }
+  });
+}
+
 showInitRepoDialog(http, pfs, fs).then(async repo => {
   currentRepo = repo;
-    const files = await repo.listFiles();
-
-    await showSelectFileDialog(files).then(async selectedFile => {
-      if (selectedFile) {
-        currentFile = selectedFile;
-        const content = await repo.readFile(selectedFile);
-        quill.root.innerHTML = content;
-        ignoreDelta = true;
-      }
-    });
+  const files = await repo.listFiles();
+  const passedFile = new URLSearchParams(window.location.search).get('f');
+  if (passedFile && files.includes(passedFile)) {
+    await setCurrentFile(passedFile);
+  } else {
+    await localShowSelectFileDialog();
+  }
 });
+
+attachClick('select_file_button', async () => await localShowSelectFileDialog());
+attachClick('preview_button', () => location.assign(`/preview.html?f=${encodeURIComponent(currentFile)}`));
+attachClick('revert_current_button', async () => await currentRepo.revertFile(currentFile));
+attachClick('revert_all_button', async () => await currentRepo.revertAll());
+attachClick('deploy_button', async () => currentRepo.commitModifications().then(/* silence */));
+
 </script>
 </html>

@@ -2,7 +2,7 @@ html, body {
     height: 93%;
 }
 
-#filesdialog {
+#filesdialog, #commitdialog {
     width: 50%;
     min-width: 10rem;
 }
@@ -23,7 +23,32 @@ html, body {
 
 @media only screen and (min-width: 960px) {
     /* styles for browsers larger than 960px; */
-    #filesdialog {
+    #filesdialog, #commitdialog {
         max-width: 50rem;
     } 
+}
+
+#commitdialog textarea {
+    width: 100%;
+}
+
+#editdialog {
+    background-color: #ccc;
+    padding: .2rem;
+    position: absolute;
+    inset-inline-start: calc(100% - 20rem);
+    inset-block-start: calc(100% - 4rem);
+}
+
+#previewdialog {
+    background-color: #ccc;
+    padding: .2rem;
+    position: absolute;
+    inset-inline-start: calc(100% - 4rem);
+    inset-block-start: calc(100% - 4rem);
+}
+
+#editdialog button:hover, 
+#previewdialog button:hover {
+    background-color: #aaa;
 }

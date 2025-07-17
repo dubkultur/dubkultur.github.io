@@ -1,7 +1,7 @@
-export function byId(idOrEl) {
+export function byId(idOrEl, ops = { ignoreNotFound: false }) {
     if (typeof idOrEl === 'string') {
         const e = document.getElementById(idOrEl);
-        if (!e) {
+        if (!e && !ops.ignoreNotFound) {
             debugger;
             throw `Cannot \`getElementById("${idOrEl}"\`)`;
         }

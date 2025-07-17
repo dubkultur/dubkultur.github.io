@@ -5,15 +5,63 @@
 
     <link href="/res/style.css" rel="stylesheet" />
 
-    <dialog id="filesdialog">
+    <dialog id="initdialog">
         <form method="dialog">
-            <ul id="filesdialog_items" style=""></ul>
+            <p>
+                <div>
+                    <label for="initdialog_user">Username:</label>
+                </div>
+                <input type="text" id="initdialog_user" name="user" required size="40" value="dubkultur" />
+            </p>
+            <p>
+                <div>
+                    <label for="initdialog_email">Email:</label>
+                </div>
+                <input type="text" id="initdialog_email" name="email" required size="40" value="dubkultur.hn@gmail.com" />
+            </p>     
+            <p>
+                <div>
+                    <label for="initdialog_repo">Repository:</label>
+                </div>
+                <input type="text" id="initdialog_repo" name="repo" required size="40" value="https://github.com/dubkultur/dubkultur.github.io.git" />
+            </p>
+            <p>
+                <div>
+                    <label for="initdialog_token">Token:</label>
+                </div>
+                <input type="password" id="initdialog_token" name="token" required size="40" />
+            </p>
+            <p>
+                <label for="initdialog_store_token">Store token in LocalStorage?</label>
+                <input type="checkbox" id="initdialog_store_token" />
+            </p>
+            
             <div style="align-items: end; display: flex;justify-content: end;">
-                <input type="submit" id="filesdialog_cancel" value="Cancel" />                
+            <input type="submit" id="initdialog_ok" value="OK" />
+            <!-- Why be able to edit if you have nothing to clone !?
+            <input type="submit" id="initdialog_cancel" value="Cancel" formnovalidate />
+            -->
             </div>
+            <progress id="initdialog_progress" value="0" max="100" style="visibility: hidden; width: 100%;"></progress>
         </form>
     </dialog>
 
+    <dialog id="filesdialog">
+        <form method="dialog">
+            Pick an existing file:
+            <ul id="filesdialog_items"></ul>
+            <div id="filesdialog_new_container" style="visibility: hidden;">
+                Or create a new file:
+                <br />
+                <input type="text" id="filesdialog_new_value" size="40">&nbsp;
+                <input type="submit" id="filesdialog_new" value="Create File" />
+            </div>
+            
+            <div id="filesdialog_cancel_container" style="align-items: end; display: flex;justify-content: end;visibility: hidden;">
+                <input type="submit" id="filesdialog_cancel" value="Cancel" />
+            </div>
+        </form>
+    </dialog>
 
     <!--<script src="https://unpkg.com/@isomorphic-git/lightning-fs"></script>-->
     <script src="/res/vendor/lightning-fs.js"></script>
@@ -24,37 +72,47 @@
 //import http from 'https://unpkg.com/isomorphic-git/http/web/index.js'
 import http from '/res/vendor/http.js'
 
-/*
-window.fs = new LightningFS('fs')
-window.pfs = window.fs.promises
-
-window.http = http;
-*/
-
 const fs = new LightningFS('fs'),
 pfs = fs.promises;
 
+import { attachClick } from '/res/js/doc_utils.js';
 import { showInitRepoDialog, showSelectFileDialog } from '/res/js/self.js';
+
+let currentFile;
+
+async function setCurrentFile(repo, file) {
+    currentFile = file;
+    const c = (await repo.readFile(currentFile)),
+      content = c.replaceAll(/href="([^"]*)[^>]+"/g, "href='preview.html?f=$1' onClick='(() => location.assign(\"preview.html?f=$1\"))()'");
+    const injectUIHtmlString = `
+        <link href="/res/style.css" rel="stylesheet" />
+        <div id="previewdialog">
+            <button onClick='(() =>
+                    location.assign("/edit.html?f=${encodeURIComponent(currentFile)}")
+                )();'>
+                <!-- return to edit -->
+                <img src="/res/vendor/bootstrap/arrow-return-left.svg" class="red" alt="Back to edit" width="32" height="32">
+            </button>
+        </div>`
+    const parser = new DOMParser(),
+        newDocument = parser.parseFromString(injectUIHtmlString  + content, 'text/html'),
+        currentRoot = document.documentElement;
+    document.replaceChild(newDocument.documentElement, currentRoot);
+}
 
 showInitRepoDialog(http, pfs, fs).then(async repo => {
     const files = await repo.listFiles();
-    await showSelectFileDialog(files).then(async selectedFile => {
-      if (selectedFile) {
-        const content = await repo.readFile(selectedFile);
-        const injectUIHtmlString = `
-            <button id='gotoEdit' style='position: absolute;inset-inline-start: 40px;inset-block-start: 40px;' 
-                onClick='(function() {
-                    window.location.href = '/edit.html#f=${encodeURIComponent(selectedFile)}';
-                })();'>
-                    Edit!
-            </button>`;
-
-        const parser = new DOMParser(),
-            newDocument = parser.parseFromString(injectUIHtmlString  + content, 'text/html'),
-            currentRoot = document.documentElement;
-        document.replaceChild(newDocument.documentElement, currentRoot);
-      }
-    });
+    const passedFile = new URLSearchParams(window.location.search).get('f');
+    if (passedFile && files.includes(passedFile)) {
+        await setCurrentFile(repo, passedFile);
+    } else {
+        await showSelectFileDialog(files).then(async selectedFile => {
+            if (selectedFile) {
+                selectedFile = selectedFile.value;
+                await setCurrentFile(repo, selectedFile);
+            }
+        });
+    }
 });
 </script>
 </html>
