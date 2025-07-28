@@ -33,11 +33,26 @@ html, body {
 }
 
 #editdialog {
-    background-color: #ccc;
+    background-color: rgba(50, 50, 50, .3);
     padding: .2rem;
     position: absolute;
-    inset-inline-start: calc(100% - 20rem);
-    inset-block-start: calc(100% - 4rem);
+    inset-inline-start: 1rem;
+    inset-block-start: calc(100% - 3rem);
+}
+
+#editdialog button {
+    background-color: rgba(150, 150, 150, .5);
+    border-style: solid;
+}
+
+#editdialog button:hover {
+    background-color: rgba(100, 100, 100, 1);
+    border-color: #d68080;
+}
+
+#editdialog button img {
+    height: 1.5rem;
+    width: 1.5rem;
 }
 
 #previewdialog {

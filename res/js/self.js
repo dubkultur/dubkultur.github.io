@@ -59,16 +59,19 @@ export function showInitRepoDialog(http, pfs, fs) {
   return new Promise(async (resolve) => {
     const dialog = byId('initdialog');
     dialog.showModal();
+    const progressDialog = initProgressDialog();
     enable('initdialog_ok', false);
 
     const existingRepoInfo = repoInfoFromLocalStorage();
     if (existingRepoInfo) {
+      progressDialog.setProgress(10);
       byId('initdialog_user').value = existingRepoInfo.user;
       byId('initdialog_email').value = existingRepoInfo.email;
       byId('initdialog_repo').value = existingRepoInfo.repo;
-
+      progressDialog.setProgress(20);
       const existingRepo = await isAlreadyCloned(http, pfs, fs);
       if (existingRepo) {
+        progressDialog.setProgress(100);
         dialog.close();
         resolve(existingRepo);
       }
@@ -106,7 +109,6 @@ export function showInitRepoDialog(http, pfs, fs) {
             };
       repoInfoToLocalStorage(storeToken, repoInfo);
 
-      const progressDialog = initProgressDialog();
       const repoObj = await initRepo(http, pfs, fs, THE_ONE_AND_ONLY_LOCALDIR, repoInfo, progressDialog);
       dialog.close();
       resolve(repoObj);
